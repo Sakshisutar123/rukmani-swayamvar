@@ -22,12 +22,22 @@ if (process.env.MAIL_PASS && passLength !== 16) {
 }
 
 // Send mail setup
+// Using direct SMTP instead of 'service: gmail' for better compatibility with cloud hosting
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
   },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
+  // Retry configuration
+  pool: true,
+  maxConnections: 1,
+  maxMessages: 3,
 });
 
 // Verify transporter configuration
