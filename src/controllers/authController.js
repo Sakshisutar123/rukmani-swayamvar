@@ -1,34 +1,39 @@
 import User from '../models/User.js';
 import bcrypt from 'bcrypt';
 import otpGenerator from 'otp-generator';
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
 
-/* ----------------------- EMAIL TRANSPORTER (MAILERSEND) ----------------------- */
+/* ----------------------- MAILERSEND (API EMAIL) ----------------------- */
+import { MailerSend, EmailParams, Sender } from "mailersend";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.MAILER_HOST,
-  port: Number(process.env.MAILER_PORT),
-  secure: false,
-  auth: {
-    user: process.env.MAILER_USER,
-    pass: process.env.MAILER_PASS,
-  },
-  connectionTimeout: 10000,
-  socketTimeout: 10000,
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
 });
 
-transporter.verify((err) => {
-  if (err) {
-    console.log("❌ Email transporter error:", err.message);
-  } else {
-    console.log("✅ Email transporter ready (MailerSend)");
+const sentFrom = new Sender(
+  process.env.MAIL_FROM,
+  process.env.MAIL_FROM_NAME || "DCS Coaching"
+);
+
+async function sendEmail(to, subject, html) {
+  try {
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo([{ email: to }])
+      .setSubject(subject)
+      .setHtml(html);
+
+    await mailerSend.email.send(emailParams);
+    console.log("📧 MailerSend email sent!");
+    return true;
+  } catch (err) {
+    console.error("❌ MailerSend error:", err.message);
+    return false;
   }
-});
+}
 
 /* ---------------------------- 1️⃣ CHECK USER ---------------------------- */
-
 export const checkUser = async (req, res) => {
   try {
     const { uniqueId } = req.body;
@@ -45,7 +50,6 @@ export const checkUser = async (req, res) => {
 };
 
 /* ---------------------------- 2️⃣ SEND OTP ---------------------------- */
-
 export const sendOtp = async (req, res) => {
   try {
     const { uniqueId } = req.body;
@@ -62,33 +66,30 @@ export const sendOtp = async (req, res) => {
     user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
     await user.save();
 
-    // MAIL VALIDATION
-    if (!process.env.MAILER_USER || !process.env.MAILER_PASS) {
+    const emailSent = await sendEmail(
+      user.email,
+      "OTP Verification",
+      `<p>Your OTP is <b>${otp}</b>. It expires in 5 minutes.</p>`
+    );
+
+    if (!emailSent) {
       return res.status(500).json({
-        message: "Mail configuration missing",
-        error: "MAILER_USER or MAILER_PASS not set"
+        message: "Failed to send OTP",
+        error: "MailerSend API error",
       });
     }
-
-    await transporter.sendMail({
-      from: process.env.MAIL_FROM,
-      to: user.email,
-      subject: "OTP Verification",
-      text: `Your OTP is ${otp}. It expires in 5 minutes.`,
-    });
 
     res.json({ message: "OTP sent successfully" });
 
   } catch (err) {
     res.status(500).json({
       message: "Error sending OTP",
-      error: err.message
+      error: err.message,
     });
   }
 };
 
 /* ---------------------------- 3️⃣ VERIFY OTP ---------------------------- */
-
 export const verifyOtp = async (req, res) => {
   try {
     const { uniqueId, otp } = req.body;
@@ -107,7 +108,6 @@ export const verifyOtp = async (req, res) => {
 };
 
 /* ---------------------------- 4️⃣ SET PASSWORD ---------------------------- */
-
 export const setPassword = async (req, res) => {
   try {
     const { uniqueId, password } = req.body;
@@ -130,28 +130,43 @@ export const setPassword = async (req, res) => {
   }
 };
 
-/* ---------------------------- 5️⃣ TEST EMAIL ---------------------------- */
-
+/* ---------------------------- 5️⃣ TEST EMAIL CONFIG ---------------------------- */
 export const testEmailConfig = async (req, res) => {
   try {
-    await transporter.verify();
+    if (!process.env.MAILERSEND_API_KEY) {
+      return res.status(400).json({
+        message: "MailerSend key missing",
+        error: "Add MAILERSEND_API_KEY in .env",
+      });
+    }
+
+    const test = await sendEmail(
+      process.env.MAIL_FROM,
+      "MailerSend Test Email",
+      "<p>Your MailerSend integration works!</p>"
+    );
+
+    if (!test) {
+      return res.status(500).json({
+        message: "MailerSend test failed",
+      });
+    }
 
     res.json({
       message: "MailerSend configuration valid",
       email: process.env.MAIL_FROM,
-      status: "ready"
+      status: "ready",
     });
 
   } catch (err) {
     res.status(500).json({
-      message: "Email configuration error",
+      message: "Email config error",
       error: err.message,
     });
   }
 };
 
 /* ---------------------------- 6️⃣ LOGIN ---------------------------- */
-
 export const loginUser = async (req, res) => {
   try {
     const { uniqueId, password } = req.body;
