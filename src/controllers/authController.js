@@ -240,13 +240,20 @@ export const sendOtp = async (req, res) => {
         userEmail: user.email || '❌ Missing'
       };
 
+      // Check if it's a domain verification error
+      const isDomainError = process.env.MAIL_FROM?.includes('gmail.com') || 
+                            process.env.MAIL_FROM?.includes('yahoo.com') ||
+                            process.env.MAIL_FROM?.includes('hotmail.com');
+
       return res.status(500).json({
         message: "Failed to send OTP",
         error: "MailerSend API error",
         debug: envCheck,
-        hint: process.env.MAIL_FROM && !process.env.MAIL_FROM.includes('@') 
-          ? "MAIL_FROM must be an email address (e.g., noreply@yourdomain.com), not a name"
-          : "Check server logs for detailed error message"
+        hint: isDomainError 
+          ? "Gmail/Yahoo/Hotmail domains cannot be verified. Use a custom domain or MailerSend test domain. See FIX_MAILERSEND_DOMAIN.md"
+          : process.env.MAIL_FROM && !process.env.MAIL_FROM.includes('@') 
+            ? "MAIL_FROM must be an email address (e.g., noreply@yourdomain.com), not a name"
+            : "Domain must be verified in MailerSend dashboard. Check server logs for details."
       });
     }
 
