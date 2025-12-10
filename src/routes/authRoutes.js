@@ -3,6 +3,10 @@ import { checkUser, sendOtp, verifyOtp, setPassword, loginUser, testEmailConfig 
 
 const router = express.Router();
 
+router.get('/ping', (req, res) => {
+  res.send('Auth API working!');
+});
+
 router.post('/check-user', checkUser);
 router.post('/send-otp', sendOtp);
 router.post('/verify-otp', verifyOtp);
