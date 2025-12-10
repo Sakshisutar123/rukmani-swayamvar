@@ -1,17 +1,23 @@
 // src/utils/mailer.js
-import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+import MailerSend from "mailersend";
+import dotenv from "dotenv";
 dotenv.config();
 
-export const transporter = nodemailer.createTransport({
-  host: process.env.MAILER_HOST,
-  port: Number(process.env.MAILER_PORT) || 587,
-  secure: process.env.MAILER_PORT === '465', // true for 465, false for 587
-  auth: {
-    user: process.env.MAILER_USER,
-    pass: process.env.MAILER_PASS,
-  },
-  // optional: increase timeouts on Render
-  connectionTimeout: 10_000,
-  greetingTimeout: 10_000,
+const mailer = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
 });
+
+export const sendEmail = async (to, subject, html) => {
+  try {
+    await mailer.email.send({
+      from: process.env.MAIL_FROM,
+      to: [to],
+      subject,
+      html,
+    });
+    return true;
+  } catch (err) {
+    console.error("MailerSend API error:", err);
+    return false;
+  }
+};
