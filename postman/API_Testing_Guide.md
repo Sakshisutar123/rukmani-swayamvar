@@ -208,3 +208,21 @@ Create a Postman environment with:
 4. **Database**: Ensure PostgreSQL is running and database is connected
 5. **Email**: Configure `.env` file with email credentials for OTP sending
 
+---
+
+## Conversations (Messaging)
+
+- **POST** `/api/conversations` – Create or get conversation. Body: `{ "userId", "otherUserId" }`. Response: `{ success, conversation }`.
+- **POST** `/api/conversations/list` – List my conversations. Body: `{ "userId", "page?", "limit?" }`. Response: `{ success, conversations[] }`.
+- **POST** `/api/conversations/messages` – Send message. Body: `{ "userId", "conversationId", "content" }`. Response: `{ success, message }`.
+- **POST** `/api/conversations/messages/list` – List messages. Body: `{ "userId", "conversationId", "page?", "limit?", "markRead?" }`. Response: `{ success, messages[], pagination }`.
+
+Use collection variables: `userId`, `otherUserId`, `conversationId` (set by Create or Get Conversation).
+
+---
+
+## Calls (Voice/Video)
+
+- **POST** `/api/calls/session` – Create call session (Agora/Twilio). Body: `{ "userId", "otherUserId", "type": "voice"|"video" }`. Returns 503 until CPaaS is configured.
+- **POST** `/api/calls/logs` – List call logs. Body: `{ "userId", "page?", "limit?" }`. Response: `{ success, logs[] }`.
+

@@ -1,0 +1,886 @@
+{
+  "info": {
+    "_postman_id": "12345678-1234-1234-1234-123456789012",
+    "name": "Matrimony App API",
+    "description": "Complete API collection for Matrimony App Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "12345678"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/auth/ping",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "ping"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Database Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/auth/db-status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "db-status"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Test Email Config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/auth/test-email",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "test-email"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Auth - Registration Flow",
+      "item": [
+        {
+          "name": "1. Send OTP (Email)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"{{email}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/send-otp", "host": ["{{base_url}}"], "path": ["api", "auth", "send-otp"] }
+          },
+          "response": []
+        },
+        {
+          "name": "1b. Send OTP (Phone)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"phone\": \"{{phone}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/send-otp", "host": ["{{base_url}}"], "path": ["api", "auth", "send-otp"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"{{email}}\",\n    \"otp\": \"{{otp}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/verify-otp", "host": ["{{base_url}}"], "path": ["api", "auth", "verify-otp"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.userId) { pm.environment.set('userId', jsonData.userId); }",
+                  "if (jsonData.email) { pm.environment.set('email', jsonData.email); }",
+                  "pm.test(\"OTP verified\", function () {",
+                  "    pm.expect(jsonData.message).to.eql('OTP verified successfully');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "3. Set Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"SecurePassword123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/set-password", "host": ["{{base_url}}"], "path": ["api", "auth", "set-password"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.userId) { pm.environment.set('userId', jsonData.userId); }",
+                  "if (jsonData.email) { pm.environment.set('email', jsonData.email); }",
+                  "pm.test(\"Password set\", function () {",
+                  "    pm.expect(jsonData.message).to.include('Password set');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "4. Create Profile",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": \"{{userId}}\",\n    \"phone\": \"+919876543210\",\n    \"fullName\": \"John Doe\",\n    \"whoUses\": \"self\",\n    \"gender\": \"Male\",\n    \"dateOfBirth\": \"1995-01-01\",\n    \"age\": 28,\n    \"height\": 175.5,\n    \"weight\": 72.0,\n    \"skinTone\": \"Wheatish\",\n    \"doSmoke\": false,\n    \"doDrink\": false,\n    \"diet\": \"Vegetarian\",\n    \"religion\": \"Hindu\",\n    \"caste\": \"Marathi\",\n    \"subCaste\": \"\",\n    \"city\": \"Mumbai\",\n    \"state\": \"Maharashtra\",\n    \"country\": \"India\",\n    \"address\": \"123 Example Street\",\n    \"profession\": \"Software Engineer\",\n    \"occupation\": \"Developer\",\n    \"education\": \"B.Tech\",\n    \"workExperience\": 5,\n    \"income\": 1200000,\n    \"companyName\": \"Acme Corp\",\n    \"workLocation\": \"Mumbai\",\n    \"maritalStatus\": \"Single\",\n    \"haveChildren\": false,\n    \"motherTongue\": \"Marathi\",\n    \"manglikStatus\": \"No\",\n    \"aboutMe\": \"Short bio here\",\n    \"familyStatus\": \"Middle class\",\n    \"familyValues\": \"Traditional\",\n    \"familyType\": \"Nuclear\",\n    \"familyIncome\": 500000,\n    \"motherOccupation\": \"Teacher\",\n    \"fatherOccupation\": \"Retired\",\n    \"profilePicture\": \"\",\n    \"bio\": \"Profile bio text\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/auth/create-profile", "host": ["{{base_url}}"], "path": ["api", "auth", "create-profile"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response contains full user object', function () {",
+                  "  pm.expect(jsonData).to.have.property('user');",
+                  "});",
+                  "pm.test('Occupation and income saved', function () {",
+                  "  pm.expect(jsonData.user).to.have.property('occupation');",
+                  "  pm.expect(jsonData.user.occupation).to.eql('Developer');",
+                  "  pm.expect(jsonData.user).to.have.property('income');",
+                  "  pm.expect(jsonData.user.income).to.eql(1200000);",
+                  "});",
+                  "pm.test('Height saved', function () {",
+                  "  pm.expect(jsonData.user).to.have.property('height');",
+                  "  pm.expect(jsonData.user.height).to.eql(175.5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "5. Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"{{email}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/resend-otp", "host": ["{{base_url}}"], "path": ["api", "auth", "resend-otp"] }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"SecurePassword123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Preferences",
+      "item": [
+        {
+          "name": "Save/Update Partner Preferences",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"fields\": [\"religion\",\"education\"],\n  \"age_range\": [25,30],\n  \"height_range\": [160,180],\n  \"income_range\": [500000,1500000],\n  \"country_select\": [\"India\"],\n  \"marital_status\": \"Single\",\n  \"religion\": \"Hindu\",\n  \"occupation\": \"Engineer\",\n  \"education\": \"Bachelors\",\n  \"mother_tongue\": \"Marathi\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/preferences", "host": ["{{base_url}}"], "path": ["api", "preferences"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": [
+                "pm.test(\"Status code is 200\", function () {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "var jsonData = pm.response.json();",
+                "pm.test(\"Response contains partnerPreferences\", function () {",
+                "  pm.expect(jsonData).to.have.property('partnerPreferences');",
+                "});"
+              ], "type": "text/javascript" }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "item": [
+        {
+          "name": "Add to Favorites",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"profileId\": \"{{profileId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/favorites",
+              "host": ["{{base_url}}"],
+              "path": ["api", "favorites"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 or 200', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and favorite', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('favorite');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List My Favorites",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/favorites/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "favorites", "list"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and data', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('data');",
+                  "  pm.expect(jsonData).to.have.property('pagination');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Add to Shortlist",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"profileId\": \"{{profileId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/favorites/shortlist",
+              "host": ["{{base_url}}"],
+              "path": ["api", "favorites", "shortlist"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 201', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Remove from Shortlist",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"profileId\": \"{{profileId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/favorites/shortlist/remove",
+              "host": ["{{base_url}}"],
+              "path": ["api", "favorites", "shortlist", "remove"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List My Shortlist",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/favorites/shortlist/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "favorites", "shortlist", "list"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and data', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('data');",
+                  "  pm.expect(jsonData).to.have.property('pagination');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Conversations (Messaging)",
+      "item": [
+        {
+          "name": "Create or Get Conversation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"otherUserId\": \"{{otherUserId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/conversations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "conversations"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 201', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has conversation', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('conversation');",
+                  "});",
+                  "if (jsonData.conversation && jsonData.conversation.id) {",
+                  "  pm.collectionVariables.set('conversationId', jsonData.conversation.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List My Conversations",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/conversations/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "conversations", "list"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and conversations', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('conversations');",
+                  "  pm.expect(jsonData.conversations).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"conversationId\": \"{{conversationId}}\",\n  \"content\": \"Hello! Interested to connect.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/conversations/messages",
+              "host": ["{{base_url}}"],
+              "path": ["api", "conversations", "messages"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and message with senderId and receiverId', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('message');",
+                  "  pm.expect(jsonData.message).to.have.property('senderId');",
+                  "  pm.expect(jsonData.message).to.have.property('receiverId');",
+                  "  pm.expect(jsonData.message).to.have.property('content');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Messages",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"conversationId\": \"{{conversationId}}\",\n  \"page\": 1,\n  \"limit\": 20,\n  \"markRead\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/conversations/messages/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "conversations", "messages", "list"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success, messages and pagination', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('messages');",
+                  "  pm.expect(jsonData).to.have.property('pagination');",
+                  "  pm.expect(jsonData.messages).to.be.an('array');",
+                  "});",
+                  "if (jsonData.messages && jsonData.messages.length > 0) {",
+                  "  pm.test('Each message has senderId and receiverId', function () {",
+                  "    jsonData.messages.forEach(function(msg) {",
+                  "      pm.expect(msg).to.have.property('senderId');",
+                  "      pm.expect(msg).to.have.property('receiverId');",
+                  "    });",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Calls (Voice/Video)",
+      "item": [
+        {
+          "name": "Create Call Session",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"otherUserId\": \"{{otherUserId}}\",\n  \"type\": \"voice\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/calls/session",
+              "host": ["{{base_url}}"],
+              "path": ["api", "calls", "session"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200, 501 or 503', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 501, 503]);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success', function () {",
+                  "  pm.expect(jsonData).to.have.property('success');",
+                  "});",
+                  "if (pm.response.code === 200 && jsonData.channelId) {",
+                  "  pm.collectionVariables.set('callChannelId', jsonData.channelId);",
+                  "}",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Response has appId, channelId, token', function () {",
+                  "    pm.expect(jsonData).to.have.property('appId');",
+                  "    pm.expect(jsonData).to.have.property('channelId');",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "End Call",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"channelId\": \"{{callChannelId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/calls/end",
+              "host": ["{{base_url}}"],
+              "path": ["api", "calls", "end"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Call Logs",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/calls/logs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "calls", "logs"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success, logs and pagination', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('logs');",
+                  "  pm.expect(jsonData.logs).to.be.an('array');",
+                  "  pm.expect(jsonData).to.have.property('pagination');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Profiles",
+      "item": [
+        {
+          "name": "Profiles API Ping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/ping",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "ping"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Users",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "all"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success, data and total', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('data');",
+                  "  pm.expect(jsonData).to.have.property('total');",
+                  "  pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Profiles by Partner Preferences",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"page\": 1,\n  \"limit\": 20,\n  \"includeAllGenders\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "list"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and data', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('data');",
+                  "  pm.expect(jsonData).to.have.property('pagination');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Profile Details (by userId)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/details",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "details"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and profile', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('profile');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get My Profile Details",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and profile', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('profile');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Edit My Profile",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"fullName\": \"John Doe\",\n  \"bio\": \"Updated bio text\",\n  \"city\": \"Mumbai\",\n  \"occupation\": \"Software Engineer\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/update",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Response has success and profile', function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "  pm.expect(jsonData).to.have.property('profile');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000", "type": "string" },
+    { "key": "email", "value": "john@example.com", "type": "string" },
+    { "key": "phone", "value": "+919876543210", "type": "string" },
+    { "key": "otp", "value": "", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "profileId", "value": "", "type": "string", "description": "Profile/user ID to add to favorites" },
+    { "key": "otherUserId", "value": "", "type": "string", "description": "Other user ID for conversation" },
+    { "key": "conversationId", "value": "", "type": "string", "description": "Conversation ID (set by Create or Get Conversation)" },
+    { "key": "callChannelId", "value": "", "type": "string", "description": "Call channel/room ID (set by Create Call Session when implemented)" }
+  ],
+  "protocolProfileBehavior": {}
+}

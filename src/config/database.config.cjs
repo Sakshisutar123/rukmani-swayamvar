@@ -6,7 +6,7 @@ module.exports = {
   development: {
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'vescript',
-    database: process.env.DB_NAME || 'myschoolhub',
+    database: process.env.DB_NAME || 'matrimony',
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
@@ -15,7 +15,7 @@ module.exports = {
   test: {
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'vescript',
-    database: process.env.DB_NAME_TEST || 'myschoolhub_test',
+    database: process.env.DB_NAME_TEST || 'matrimony_test',
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
     dialect: 'postgres',

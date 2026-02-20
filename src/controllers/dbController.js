@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import PartnerPreference from '../models/PartnerPreference.js';
 import { sequelize } from '../config/database.js';
 
 // Database diagnostic endpoint
@@ -54,7 +55,7 @@ export const checkDatabase = async (req, res) => {
       recommendations: !tableExists ? [
         'Run: CREATE TABLE users (...)',
         'Or set SYNC_DB=true in environment variables',
-        'See migrations/check-and-fix-production.sql'
+        'See migrations/create-users-table-production.sql'
       ] : userCount === 0 ? [
         'Table exists but no users found',
         'Add a user: INSERT INTO users ("uniqueId", "fullName", email) VALUES (...)'
@@ -69,6 +70,37 @@ export const checkDatabase = async (req, res) => {
         connected: false
       }
     });
+  }
+};
+
+// Save or update partner preferences. POST /api/preferences with body: { userId, ...prefs }
+export const savePartnerPreferences = async (req, res) => {
+  try {
+    const userId = req.body?.userId;
+
+    if (!userId) {
+      return res.status(400).json({
+        error: 'userId is required in request body (e.g. POST /api/preferences with body: { userId, age_range?, ... })'
+      });
+    }
+
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const { userId: _skip, ...prefs } = body;
+
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    let partnerPref = await PartnerPreference.findOne({ where: { userId } });
+    if (partnerPref) {
+      await partnerPref.update(prefs);
+    } else {
+      partnerPref = await PartnerPreference.create({ userId, ...prefs });
+    }
+
+    res.json({ success: true, partnerPreferences: partnerPref });
+  } catch (err) {
+    console.error('Save partner preferences error:', err);
+    res.status(500).json({ error: err.message });
   }
 };
 

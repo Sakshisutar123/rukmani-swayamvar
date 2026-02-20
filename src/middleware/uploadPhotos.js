@@ -1,0 +1,92 @@
+import multer from 'multer';
+import path from 'path';
+import { PROFILES_PHOTOS_DIR, ensureUploadDirs } from '../config/uploadPaths.js';
+
+// Ensure base upload dirs exist (idempotent)
+ensureUploadDirs();
+const UPLOAD_BASE = PROFILES_PHOTOS_DIR;
+
+/** Allowed MIME types for profile photos (gallery/camera) */
+const ALLOWED_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_COUNT = 10; // max photos per profile (including existing)
+
+/** Single folder for all profile photos; filename = profile_<timestamp>_<random>.<ext> */
+function getStorage() {
+  return multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOAD_BASE),
+    filename: (_req, file, cb) => {
+      const mt = (file.mimetype || '').toLowerCase();
+      const ext = mt === 'image/jpeg' || mt === 'image/jpg' ? '.jpg' : mt === 'image/png' ? '.png' : mt === 'image/gif' ? '.gif' : mt === 'image/webp' ? '.webp' : mt === 'image/heic' ? '.heic' : path.extname(file.originalname || '') || '.jpg';
+      const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      cb(null, `profile_${unique}${ext}`);
+    }
+  });
+}
+
+function fileFilter(_req, file, cb) {
+  const mt = (file.mimetype || '').toLowerCase();
+  const allowed = ALLOWED_MIMES.includes(mt) || mt.startsWith('image/');
+  if (!allowed) {
+    return cb(new Error('Only images from gallery/camera are allowed (JPEG, PNG, GIF, WebP, HEIC)'), false);
+  }
+  cb(null, true);
+}
+
+/**
+ * Multer for profile photos from device gallery/camera.
+ * For multipart uploads, pass userId in query: POST /photos/upload?userId=...
+ * Form fields: "photos" (multiple) and/or "photo" (single) - so app can send one or many from gallery.
+ */
+export function createProfilePhotoUpload() {
+  return (req, res, next) => {
+    const userId = req.query?.userId || req.body?.userId;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'userId is required. Use query: ?userId=... for multipart upload.' });
+    }
+    const storage = getStorage();
+    const upload = multer({
+      storage,
+      fileFilter,
+      limits: { fileSize: MAX_FILE_SIZE, files: 6 }
+    });
+    upload.fields([
+      { name: 'photos', maxCount: 6 },
+      { name: 'photo', maxCount: 1 }
+    ])(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, error: 'File too large. Max 5MB per image.' });
+        if (err.code === 'LIMIT_FILE_COUNT') return res.status(400).json({ success: false, error: 'Maximum 6 photos per upload.' });
+        if (err.message) return res.status(400).json({ success: false, error: err.message });
+        return res.status(500).json({ success: false, error: 'Upload failed' });
+      }
+      next();
+    });
+  };
+}
+
+/** Single photo upload (field name: photo) */
+export function createSinglePhotoUpload() {
+  return (req, res, next) => {
+    const userId = req.query?.userId || req.body?.userId;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'userId is required. Use query: ?userId=... for multipart upload.' });
+    }
+    const storage = getStorage();
+    const upload = multer({
+      storage,
+      fileFilter,
+      limits: { fileSize: MAX_FILE_SIZE }
+    });
+    upload.single('photo')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, error: 'File too large. Max 5MB.' });
+        if (err.message) return res.status(400).json({ success: false, error: err.message });
+        return res.status(500).json({ success: false, error: 'Upload failed' });
+      }
+      next();
+    });
+  };
+}
+
+export { MAX_COUNT, UPLOAD_BASE, PROFILES_PHOTOS_DIR };

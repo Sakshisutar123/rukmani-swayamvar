@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Socket.io real-time test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 20px auto; padding: 0 12px; }
+    input, button { margin: 4px 8px 4px 0; padding: 6px 10px; }
+    button { cursor: pointer; }
+    .log { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-size: 13px; max-height: 280px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+    .log .event { color: #9cdcfe; }
+    .log .payload { color: #ce9178; margin-left: 8px; }
+    .log .time { color: #6a9955; font-size: 11px; }
+    section { margin-bottom: 16px; }
+    h2 { font-size: 1rem; margin-bottom: 8px; }
+    .connected { color: green; }
+    .disconnected { color: #888; }
+  </style>
+</head>  
+<body>
+  <h1>Socket.io real-time test</h1>
+  <p>Connect as a user to receive <code>new_message</code> and <code>typing</code>. Use Postman to send messages (REST) and see them here.</p>
+
+  <section>
+    <h2>Connection</h2>
+    <input type="text" id="serverUrl" value="http://localhost:5000" placeholder="Server URL" size="28" />
+    <input type="text" id="userId" placeholder="User ID (UUID)" size="40" />
+    <button id="btnConnect">Connect</button>
+    <button id="btnDisconnect">Disconnect</button>
+    <span id="status" class="disconnected">Not connected</span>
+  </section>
+
+  <section>
+    <h2>Conversation room (for typing)</h2>
+    <input type="text" id="conversationId" placeholder="Conversation ID (UUID)" size="40" />
+    <button id="btnJoin">Join conversation</button>
+    <button id="btnLeave">Leave conversation</button>
+    <button id="btnTyping">Emit typing</button>
+    <button id="btnTypingStop">Emit typing_stop</button>
+  </section>
+
+  <section>
+    <h2>Auth (required to receive new_message)</h2>
+    <p>After connecting, click &quot;Send auth&quot; so the server registers this socket for your userId.</p>
+    <button id="btnAuth">Send auth</button>
+  </section>
+
+  <section>
+    <h2>Event log</h2>
+    <div id="log" class="log">(events will appear here)</div>
+  </section>
+
+  <script>
+    const serverUrlInput = document.getElementById('serverUrl');
+    const userIdInput = document.getElementById('userId');
+    const conversationIdInput = document.getElementById('conversationId');
+    const btnConnect = document.getElementById('btnConnect');
+    const btnDisconnect = document.getElementById('btnDisconnect');
+    const btnJoin = document.getElementById('btnJoin');
+    const btnLeave = document.getElementById('btnLeave');
+    const btnTyping = document.getElementById('btnTyping');
+    const btnTypingStop = document.getElementById('btnTypingStop');
+    const btnAuth = document.getElementById('btnAuth');
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+
+    let socket = null;
+
+    function log(event, payload) {
+      const time = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.innerHTML = '<span class="time">' + time + '</span> <span class="event">' + event + '</span><span class="payload">' + (payload !== undefined ? JSON.stringify(payload) : '') + '</span>';
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function connect() {
+      const url = serverUrlInput.value.trim();
+      if (!url) { log('error', 'Enter server URL'); return; }
+      if (socket) { socket.disconnect(); socket = null; }
+      socket = io(url, { path: '/socket.io', transports: ['websocket', 'polling'] });
+      statusEl.textContent = 'Connecting...';
+      statusEl.className = 'disconnected';
+
+      socket.on('connect', () => {
+        statusEl.textContent = 'Connected';
+        statusEl.className = 'connected';
+        log('connect', { id: socket.id });
+      });
+      socket.on('disconnect', (reason) => {
+        statusEl.textContent = 'Disconnected: ' + reason;
+        statusEl.className = 'disconnected';
+        log('disconnect', reason);
+      });
+      socket.on('new_message', (data) => {
+        log('new_message', data);
+      });
+      socket.on('typing', (data) => {
+        log('typing', data);
+      });
+      socket.on('connect_error', (err) => {
+        log('connect_error', err.message);
+        statusEl.textContent = 'Error: ' + err.message;
+        statusEl.className = 'disconnected';
+      });
+    }
+
+    btnConnect.onclick = () => connect();
+    btnDisconnect.onclick = () => {
+      if (socket) { socket.disconnect(); socket = null; }
+      statusEl.textContent = 'Not connected';
+      statusEl.className = 'disconnected';
+    };
+
+    btnAuth.onclick = () => {
+      const uid = userIdInput.value.trim();
+      if (!socket || !socket.connected) { log('error', 'Connect first'); return; }
+      if (!uid) { log('error', 'Enter User ID'); return; }
+      socket.emit('auth', { userId: uid });
+      log('emit auth', { userId: uid });
+    };
+
+    btnJoin.onclick = () => {
+      const cid = conversationIdInput.value.trim();
+      if (!socket || !socket.connected) { log('error', 'Connect first'); return; }
+      if (!cid) { log('error', 'Enter Conversation ID'); return; }
+      socket.emit('join_conversation', { conversationId: cid });
+      log('emit join_conversation', { conversationId: cid });
+    };
+
+    btnLeave.onclick = () => {
+      const cid = conversationIdInput.value.trim();
+      if (!socket || !socket.connected) { log('error', 'Connect first'); return; }
+      if (!cid) { log('error', 'Enter Conversation ID'); return; }
+      socket.emit('leave_conversation', { conversationId: cid });
+      log('emit leave_conversation', { conversationId: cid });
+    };
+
+    btnTyping.onclick = () => {
+      const cid = conversationIdInput.value.trim();
+      const uid = userIdInput.value.trim();
+      if (!socket || !socket.connected) { log('error', 'Connect first'); return; }
+      if (!cid || !uid) { log('error', 'Enter Conversation ID and User ID'); return; }
+      socket.emit('typing', { conversationId: cid, userId: uid });
+      log('emit typing', { conversationId: cid, userId: uid });
+    };
+
+    btnTypingStop.onclick = () => {
+      const cid = conversationIdInput.value.trim();
+      const uid = userIdInput.value.trim();
+      if (!socket || !socket.connected) { log('error', 'Connect first'); return; }
+      if (!cid || !uid) { log('error', 'Enter Conversation ID and User ID'); return; }
+      socket.emit('typing_stop', { conversationId: cid, userId: uid });
+      log('emit typing_stop', { conversationId: cid, userId: uid });
+    };
+  </script>
+</body>
+</html>
