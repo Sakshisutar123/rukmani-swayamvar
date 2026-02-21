@@ -174,7 +174,7 @@ function buildWhereFromPreferences(prefs, currentUserId, currentUserGender, opti
 /**
  * POST /api/profiles/all - body: { userId }
  * Lists all user profiles from the users table, excluding the requesting user.
- * No filters applied; returns profile list attributes and photos.
+ * Gender filter: female sees only male profiles, male sees only female profiles (matrimony convention).
  */
 export const listAllUsers = async (req, res) => {
   try {
@@ -188,10 +188,28 @@ export const listAllUsers = async (req, res) => {
       });
     }
 
+    const currentUser = await User.findByPk(userId, { attributes: ['id', 'gender'] });
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const where = {
+      id: { [Op.ne]: userId }
+    };
+    // Show only opposite gender: female sees males, male sees females (matrimony convention)
+    const gender = currentUser.gender != null ? String(currentUser.gender).trim() : '';
+    const genderLower = gender.toLowerCase();
+    if (genderLower === 'male') {
+      where.gender = 'Female';
+    } else if (genderLower === 'female') {
+      where.gender = 'Male';
+    }
+
     const { count, rows } = await User.findAndCountAll({
-      where: {
-        id: { [Op.ne]: userId }
-      },
+      where,
       attributes: PROFILE_LIST_ATTRIBUTES,
       order: [['createdAt', 'DESC']]
     });
