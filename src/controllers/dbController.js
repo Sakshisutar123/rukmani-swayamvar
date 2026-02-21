@@ -108,6 +108,26 @@ export const savePartnerPreferences = async (req, res) => {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const { userId: _skip, ...prefs } = body;
 
+    // Trim range values to integers so we never store floats like 175.20397 or 5.56838
+    if (prefs.height_range && Array.isArray(prefs.height_range) && prefs.height_range.length >= 2) {
+      prefs.height_range = [
+        Math.round(Number(prefs.height_range[0])),
+        Math.round(Number(prefs.height_range[1]))
+      ];
+    }
+    if (prefs.income_range && Array.isArray(prefs.income_range) && prefs.income_range.length >= 2) {
+      prefs.income_range = [
+        Math.round(Number(prefs.income_range[0])),
+        Math.round(Number(prefs.income_range[1]))
+      ];
+    }
+    if (prefs.age_range && Array.isArray(prefs.age_range) && prefs.age_range.length >= 2) {
+      prefs.age_range = [
+        Math.round(Number(prefs.age_range[0])),
+        Math.round(Number(prefs.age_range[1]))
+      ];
+    }
+
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 

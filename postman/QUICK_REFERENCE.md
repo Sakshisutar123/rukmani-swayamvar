@@ -80,6 +80,21 @@ Content-Type: application/json
 
 ---
 
+## Profiles & Preferences (updated)
+
+| Method | Endpoint | Description | Body / Query |
+|--------|----------|-------------|--------------|
+| GET | `/api/profiles/ping` | Profiles API health | — |
+| POST | `/api/profiles/me` | Get my (logged-in) profile | `{ "userId": "{{userId}}" }` |
+| POST | `/api/profiles/update` | Update my profile (partial) | `{ "userId": "{{userId}}", "fullName": "...", "bio": "...", ... }` |
+| POST | `/api/profiles/details` | Get profile by userId | `{ "userId": "<profileUserId>" }` |
+| POST | `/api/profiles/all` | List all users (filtered by gender) | `{ "userId": "{{userId}}" }` |
+| POST | `/api/profiles/list` | List by partner preferences | `{ "userId": "{{userId}}", "page": 1, "limit": 20 }` |
+| GET | `/api/preferences?userId=` | Get partner preferences | Query: `userId={{userId}}` |
+| POST | `/api/preferences` | Save/update partner preferences | `{ "userId": "{{userId}}", "age_range": [25,35], "height_range": [160,180], "income_range": [2.5,15], "country_select": ["India"], "marital_status": "Never Married", "religion": "Hindu", "occupation": "...", "education": "...", "mother_tongue": "..." }` |
+
+---
+
 ## Response Codes
 
 - `200` - Success
@@ -95,7 +110,7 @@ Content-Type: application/json
 1. Open Postman
 2. Click **Import** button (top left)
 3. Select **File** tab
-4. Choose `My_School_Hub_API.postman_collection.json`
+4. Choose `Matrimony_API.postman_collection.json`
 5. Click **Import**
 
 ## Setup Environment Variables (Optional)

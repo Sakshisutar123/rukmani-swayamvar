@@ -193,13 +193,47 @@
       "name": "Preferences",
       "item": [
         {
+          "name": "Get Partner Preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/preferences?userId={{userId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "preferences"],
+              "query": [{ "key": "userId", "value": "{{userId}}", "description": "Logged-in user ID" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has success\", function () {",
+                  "  pm.expect(jsonData).to.have.property('success', true);",
+                  "});",
+                  "pm.test(\"Response has partnerPreferences (or null)\", function () {",
+                  "  pm.expect(jsonData).to.have.property('partnerPreferences');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
           "name": "Save/Update Partner Preferences",
           "request": {
             "method": "POST",
             "header": [ { "key": "Content-Type", "value": "application/json" } ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"fields\": [\"religion\",\"education\"],\n  \"age_range\": [25,30],\n  \"height_range\": [160,180],\n  \"income_range\": [500000,1500000],\n  \"country_select\": [\"India\"],\n  \"marital_status\": \"Single\",\n  \"religion\": \"Hindu\",\n  \"occupation\": \"Engineer\",\n  \"education\": \"Bachelors\",\n  \"mother_tongue\": \"Marathi\"\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"age_range\": [25, 35],\n  \"height_range\": [160, 180],\n  \"income_range\": [2.5, 15],\n  \"country_select\": [\"India\"],\n  \"marital_status\": \"Never Married\",\n  \"religion\": \"Hindu\",\n  \"occupation\": \"Engineer\",\n  \"education\": \"Bachelors\",\n  \"mother_tongue\": \"Marathi\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/preferences", "host": ["{{base_url}}"], "path": ["api", "preferences"] }
           },
@@ -212,6 +246,7 @@
                 "});",
                 "var jsonData = pm.response.json();",
                 "pm.test(\"Response contains partnerPreferences\", function () {",
+                "  pm.expect(jsonData).to.have.property('success', true);",
                 "  pm.expect(jsonData).to.have.property('partnerPreferences');",
                 "});"
               ], "type": "text/javascript" }

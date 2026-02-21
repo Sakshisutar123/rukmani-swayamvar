@@ -1,7 +1,7 @@
 import User from '../models/User.js';
 import PartnerPreference from '../models/PartnerPreference.js';
 import Favorite from '../models/Favorite.js';
-import { withFullPhotoUrls, parseProfilePictureToPhotos, formatProfilePictureFromPhotos } from '../utils/photoUrl.js';
+import { withFullPhotoUrls, parseProfilePictureToPhotos, formatProfilePictureFromPhotos, getFirstPhotoUrl } from '../utils/photoUrl.js';
 import { MAX_COUNT } from '../middleware/uploadPhotos.js';
 import { Op } from 'sequelize';
 
@@ -225,6 +225,7 @@ export const listAllUsers = async (req, res) => {
     const data = rows.map((r) => {
       const row = r.toJSON();
       row.photos = withFullPhotoUrls(parseProfilePictureToPhotos(row.profilePicture));
+      row.firstPhotoUrl = getFirstPhotoUrl(row.profilePicture);
       row.isFavorite = favSet.has(row.id);
       row.isShortlisted = shortlistSet.has(row.id);
       return row;
@@ -316,6 +317,7 @@ export const listProfilesByPreferences = async (req, res) => {
     const data = rows.map((r) => {
       const row = r.toJSON();
       row.photos = withFullPhotoUrls(parseProfilePictureToPhotos(row.profilePicture));
+      row.firstPhotoUrl = getFirstPhotoUrl(row.profilePicture);
       row.isFavorite = favSet.has(row.id);
       row.isShortlisted = shortlistSet.has(row.id);
       return row;

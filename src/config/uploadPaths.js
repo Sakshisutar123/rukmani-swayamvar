@@ -6,8 +6,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** Project root (directory containing package.json) */
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 
-/** Base folder for all uploads (photos, files) */
-export const UPLOADS_DIR = path.join(PROJECT_ROOT, 'uploads');
+/**
+ * Base folder for all uploads (photos, files).
+ * On server: optionally set UPLOADS_DIR in .env to an absolute path (e.g. /var/app/uploads) if you need uploads on a different volume.
+ */
+export const UPLOADS_DIR = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(PROJECT_ROOT, 'uploads');
 
 /** Profile photos: single folder uploads/profiles/ (all users; store only image name in DB) */
 export const PROFILES_PHOTOS_DIR = path.join(UPLOADS_DIR, 'profiles');

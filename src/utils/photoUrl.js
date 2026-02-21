@@ -1,7 +1,8 @@
 /**
  * Convert stored photo value (image name or path) to a full URL for display.
  * - Stored value is either: unique image name (e.g. profile_1739_abc12.jpg) or full path/URL.
- * - Set API_BASE_URL in .env for full absolute URLs.
+ * - Localhost: leave API_BASE_URL empty or set to http://localhost:PORT for same-origin.
+ * - Server: set API_BASE_URL to your public API URL (e.g. https://api.yoursite.com) so clients get absolute URLs.
  */
 
 import { PROFILES_PHOTOS_URL_PREFIX } from '../config/uploadPaths.js';
@@ -52,6 +53,17 @@ export function parseProfilePictureToPhotos(profilePicture) {
     .map((s) => s.trim())
     .filter(Boolean)
     .map((url, index) => ({ id: url, url, sortOrder: index }));
+}
+
+/**
+ * Get the first profile photo as a full display URL (for profile cards).
+ * @param {string|null|undefined} profilePicture - comma-separated image names
+ * @returns {string|null} - Full URL of first photo, or null if none
+ */
+export function getFirstPhotoUrl(profilePicture) {
+  const photos = parseProfilePictureToPhotos(profilePicture);
+  if (photos.length === 0) return null;
+  return toFullImageUrl(photos[0].url);
 }
 
 /**
