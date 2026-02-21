@@ -3,6 +3,10 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const tables = await queryInterface.showAllTables();
+    if (tables.includes('users')) {
+      return; // users already created by 20240101000000-create-users-table
+    }
     await queryInterface.createTable('users', {
       id: {
         type: Sequelize.UUID,

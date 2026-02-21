@@ -31,19 +31,23 @@ function getSendOtpTarget(body) {
   return null;
 }
 
+/**
+ * Send email via Brevo Transactional API.
+ * @returns {{ ok: true }} | {{ ok: false, reason: string }}
+ */
 async function sendEmail(to, subject, html) {
   try {
     if (!process.env.BREVO_API_KEY) {
       console.error("❌ BREVO_API_KEY not set");
-      return false;
+      return { ok: false, reason: "BREVO_API_KEY not set" };
     }
     if (!process.env.MAIL_FROM) {
       console.error("❌ MAIL_FROM not set");
-      return false;
+      return { ok: false, reason: "MAIL_FROM not set" };
     }
     if (!to || !to.includes('@')) {
       console.error("❌ Invalid recipient email:", to);
-      return false;
+      return { ok: false, reason: "Invalid recipient email" };
     }
 
     const apiInstance = new brevo.TransactionalEmailsApi();
@@ -64,17 +68,35 @@ async function sendEmail(to, subject, html) {
     console.log(`📧 Sender: ${JSON.stringify(sendSmtpEmail.sender)}`);
     await apiInstance.sendTransacEmail(sendSmtpEmail);
     console.log("📧 Email sent to:", to);
-    return true;
+    return { ok: true };
   } catch (err) {
+    const status = err.response?.status ?? err.status;
+    const body = err.response?.body ?? err.response?.data;
+    const bodyMsg = typeof body === 'string' ? body : (body?.message || body?.code || (body && JSON.stringify(body)));
     console.error("❌ Brevo error:", err.message || err);
-    let errorData = {
-      message: err.message,
-      status: err.status || err.response?.status,
-      responseBody: err.response?.body || err.response?.data,
-      errorCode: err.code
-    };
-    console.error("❌ Detailed error:", JSON.stringify(errorData, null, 2));
-    return false;
+    console.error("❌ Brevo status:", status, "body:", bodyMsg);
+
+    let reason = "Email service error";
+    if (status === 400) {
+      const msg = (body?.message || bodyMsg || '').toLowerCase();
+      if (msg.includes('sender') || msg.includes('from') || msg.includes('verified')) {
+        reason = "Sender email (MAIL_FROM) must be verified in Brevo. In Brevo: Senders & Domains → verify " + process.env.MAIL_FROM;
+      } else {
+        reason = body?.message || bodyMsg || "Bad request to Brevo (check sender and recipient)";
+      }
+    } else if (status === 401) {
+      const msg = (body?.message || bodyMsg || '').toLowerCase();
+      if (msg.includes('ip') || msg.includes('authorised') || msg.includes('authorized')) {
+        reason = "Brevo is blocking this server's IP. Add the IP to Brevo Authorised IPs or disable IP restriction: https://app.brevo.com/security/authorised_ips";
+      } else {
+        reason = "Invalid Brevo API key. Check BREVO_API_KEY in environment.";
+      }
+    } else if (status === 402) {
+      reason = "Brevo account limit or payment required.";
+    } else if (bodyMsg) {
+      reason = typeof bodyMsg === 'string' && bodyMsg.length < 200 ? bodyMsg : reason;
+    }
+    return { ok: false, reason };
   }
 }
 
@@ -189,7 +211,7 @@ export const sendOtp = async (req, res) => {
     console.log(`📤 OTP for ${channel} ${channel === 'email' ? email : phone}: ${otp} (expires in 5 minutes)`);
 
     if (channel === 'email') {
-      const emailSent = await sendEmail(
+      const emailResult = await sendEmail(
         email,
         "Matrimony Registration - OTP Verification",
         `<h2>Welcome to Matrimony App!</h2>
@@ -197,7 +219,7 @@ export const sendOtp = async (req, res) => {
          <p>This OTP expires in 5 minutes.</p>
          <p>Do not share this OTP with anyone.</p>`
       );
-      if (!emailSent) {
+      if (!emailResult.ok) {
         const envCheck = {
           BREVO_API_KEY: process.env.BREVO_API_KEY ? '✅ Set' : '❌ Missing',
           MAIL_FROM: process.env.MAIL_FROM || '❌ Missing',
@@ -205,9 +227,9 @@ export const sendOtp = async (req, res) => {
         };
         return res.status(500).json({
           message: "Failed to send OTP",
-          error: "Email service error",
+          error: emailResult.reason || "Email service error",
           debug: envCheck,
-          hint: "Check server logs for detailed error message",
+          hint: "Verify MAIL_FROM in Brevo (Senders & Domains). Check Render logs for Brevo response.",
           temp_otp_for_testing: otp
         });
       }
@@ -638,17 +660,17 @@ export const resendOtp = async (req, res) => {
     console.log(`📤 Resent OTP for ${channel} ${channel === 'email' ? email : phone}: ${otp}`);
 
     if (channel === 'email') {
-      const emailSent = await sendEmail(
+      const emailResult = await sendEmail(
         email,
         "Matrimony Registration - OTP Verification",
         `<h2>OTP Resent</h2>
          <p>Your new OTP is: <b>${otp}</b></p>
          <p>This OTP expires in 5 minutes.</p>`
       );
-      if (!emailSent) {
+      if (!emailResult.ok) {
         return res.status(500).json({
           message: "Failed to send OTP",
-          error: "Email service error",
+          error: emailResult.reason || "Email service error",
           temp_otp_for_testing: otp
         });
       }
@@ -702,16 +724,17 @@ export const testEmailConfig = async (req, res) => {
       });
     }
 
-    const test = await sendEmail(
+    const testResult = await sendEmail(
       process.env.MAIL_FROM,
       "Matrimony App - Email Config Test",
       "<h2>Email Configuration Working!</h2><p>Your email service is configured correctly.</p>"
     );
 
-    if (!test) {
+    if (!testResult.ok) {
       return res.status(500).json({
         message: "Email test failed",
-        config: config
+        config: config,
+        error: testResult.reason
       });
     }
 

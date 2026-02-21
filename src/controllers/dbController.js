@@ -73,6 +73,27 @@ export const checkDatabase = async (req, res) => {
   }
 };
 
+// Get partner preferences. GET /api/preferences?userId=... or POST (body: { userId })
+export const getPartnerPreferences = async (req, res) => {
+  try {
+    const userId = req.query?.userId ?? req.body?.userId;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'userId is required (query or body)'
+      });
+    }
+    const partnerPref = await PartnerPreference.findOne({ where: { userId } });
+    if (!partnerPref) {
+      return res.json({ success: true, partnerPreferences: null });
+    }
+    res.json({ success: true, partnerPreferences: partnerPref.toJSON() });
+  } catch (err) {
+    console.error('Get partner preferences error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 // Save or update partner preferences. POST /api/preferences with body: { userId, ...prefs }
 export const savePartnerPreferences = async (req, res) => {
   try {

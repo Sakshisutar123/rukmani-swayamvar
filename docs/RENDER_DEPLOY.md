@@ -19,6 +19,19 @@ This document walks you through deploying the **Rukmani Swayamvar Matrimony** No
 
 ---
 
+## Next steps (Web Service + PostgreSQL already created)
+
+If you already have both the **Web Service** (e.g. `rukmani-swayamvar`) and the **PostgreSQL** database created and deployed:
+
+1. **Link the database to the Web Service** (recommended) — Open your **Web Service** → **Environment** → **Add Environment Variable** → choose **Add from Render** or **Link existing resource** and select your PostgreSQL service. That adds `DATABASE_URL` automatically. If you don’t see “Link”, add `DATABASE_URL` manually (see step 2).
+2. **Set environment variables** — In the Web Service → **Environment**, add the variables from [Section 6](#6-set-environment-variables) (at least `NODE_ENV=production`, `JWT_SECRET`, and Brevo keys if you use email). Save; Render will redeploy.
+3. **Run migrations** — Use [Section 7](#7-run-database-migrations) (Pre Deploy Command or one-off with `DATABASE_URL`).
+4. **Set API_BASE_URL and CORS** — Use your service URL (e.g. `https://rukmani-swayamvar.onrender.com`) and your frontend origin. See [Section 8](#8-configure-api-base-url-and-cors).
+
+Then open `https://<your-service-name>.onrender.com/` to confirm the API is running.
+
+---
+
 ## 1. Prerequisites
 
 - **Git** installed and a **GitHub** account.
