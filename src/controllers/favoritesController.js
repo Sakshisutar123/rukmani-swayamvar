@@ -244,6 +244,43 @@ export const removeFromShortlist = async (req, res) => {
 };
 
 /**
+ * POST /api/favorites/remove - body: { userId, profileId }
+ * Remove a profile from favorites (and from shortlist if it was shortlisted).
+ */
+export const removeFromFavorites = async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const userId = body.userId;
+    const profileId = body.profileId ?? body.favoriteUserId;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'userId is required in request body' });
+    }
+    if (!profileId) {
+      return res.status(400).json({ success: false, error: 'profileId (or favoriteUserId) is required in request body' });
+    }
+
+    const favorite = await Favorite.findOne({
+      where: { userId, favoriteUserId: profileId }
+    });
+
+    if (!favorite) {
+      return res.status(404).json({ success: false, error: 'Not in favorites' });
+    }
+
+    await favorite.destroy();
+
+    res.json({
+      success: true,
+      message: 'Removed from favorites'
+    });
+  } catch (err) {
+    console.error('Remove from favorites error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+/**
  * POST /api/favorites/shortlist/list - body: { userId, page?, limit? }
  * List only shortlisted profiles (subset of favorites, with profile data).
  */

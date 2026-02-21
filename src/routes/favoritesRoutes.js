@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   addToFavorites,
+  removeFromFavorites,
   listMyFavorites,
   addToShortlist,
   removeFromShortlist,
@@ -11,6 +12,9 @@ const router = express.Router();
 
 // POST /api/favorites - body: { userId, profileId } - add a profile to favorites
 router.post('/', addToFavorites);
+
+// POST /api/favorites/remove - body: { userId, profileId } - remove from favorites
+router.post('/remove', removeFromFavorites);
 
 // POST /api/favorites/list - body: { userId, page?, limit? } - list my favorite profiles
 router.post('/list', listMyFavorites);
