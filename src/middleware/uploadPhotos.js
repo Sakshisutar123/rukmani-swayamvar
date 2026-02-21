@@ -24,9 +24,15 @@ function getStorage() {
   });
 }
 
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|heic)$/i;
+
 function fileFilter(_req, file, cb) {
   const mt = (file.mimetype || '').toLowerCase();
-  const allowed = ALLOWED_MIMES.includes(mt) || mt.startsWith('image/');
+  let allowed = ALLOWED_MIMES.includes(mt) || mt.startsWith('image/');
+  if (!allowed && (!mt || mt === 'application/octet-stream')) {
+    const name = (file.originalname || '').toLowerCase();
+    allowed = IMAGE_EXT.test(name);
+  }
   if (!allowed) {
     return cb(new Error('Only images from gallery/camera are allowed (JPEG, PNG, GIF, WebP, HEIC)'), false);
   }
