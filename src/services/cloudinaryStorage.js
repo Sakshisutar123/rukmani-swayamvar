@@ -4,21 +4,18 @@
  */
 
 import { v2 as cloudinary } from 'cloudinary';
-import {
-  CLOUDINARY_CLOUD_NAME,
-  CLOUDINARY_API_KEY,
-  CLOUDINARY_API_SECRET,
-  isCloudinaryConfigured
-} from '../config/cloudinary.js';
+import { isCloudinaryConfigured, getCloudinaryConfig } from '../config/cloudinary.js';
 
 const FOLDER = 'matrimony-profiles';
 const PREFIX = 'cloudinary:';
 
-if (isCloudinaryConfigured()) {
+function ensureCloudinaryConfig() {
+  if (!isCloudinaryConfigured()) throw new Error('Cloudinary is not configured');
+  const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
   cloudinary.config({
-    cloud_name: CLOUDINARY_CLOUD_NAME,
-    api_key: CLOUDINARY_API_KEY,
-    api_secret: CLOUDINARY_API_SECRET
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret
   });
 }
 
@@ -29,7 +26,7 @@ if (isCloudinaryConfigured()) {
  * @returns {Promise<{ publicId: string, url: string }>}
  */
 export async function uploadToCloudinary(buffer, contentType = 'image/jpeg') {
-  if (!isCloudinaryConfigured()) throw new Error('Cloudinary is not configured');
+  ensureCloudinaryConfig();
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -54,7 +51,7 @@ export async function uploadToCloudinary(buffer, contentType = 'image/jpeg') {
  * @param {string} publicId - Cloudinary public_id (e.g. "matrimony-profiles/xyz")
  */
 export async function deleteFromCloudinary(publicId) {
-  if (!isCloudinaryConfigured()) throw new Error('Cloudinary is not configured');
+  ensureCloudinaryConfig();
   return new Promise((resolve, reject) => {
     cloudinary.uploader.destroy(publicId, { resource_type: 'image' }, (err, result) => {
       if (err) return reject(err);
@@ -92,8 +89,10 @@ export function toStoredValue(publicId) {
  * Used when we store "cloudinary:public_id" in DB.
  */
 export function getPublicUrl(publicId) {
-  if (!publicId || !CLOUDINARY_CLOUD_NAME) return '';
-  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${publicId}`;
+  if (!publicId) return '';
+  const { cloudName } = getCloudinaryConfig();
+  if (!cloudName) return '';
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${publicId}`;
 }
 
 /**

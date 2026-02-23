@@ -72,8 +72,14 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log('✅ PostgreSQL connected');
-  console.log('✅ Socket.io real-time enabled\n');
+  console.log('✅ Socket.io real-time enabled');
+  const { isCloudinaryConfigured } = await import('./config/cloudinary.js');
+  const { isR2Configured } = await import('./config/r2.js');
+  if (isCloudinaryConfigured()) console.log('✅ Profile photos: Cloudinary');
+  else if (isR2Configured()) console.log('✅ Profile photos: R2');
+  else console.log('⚠️  Profile photos: local disk (not persistent on Render)');
+  console.log('');
 });

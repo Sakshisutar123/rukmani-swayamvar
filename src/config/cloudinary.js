@@ -7,11 +7,23 @@
  * - CLOUDINARY_CLOUD_NAME  – from Cloudinary dashboard
  * - CLOUDINARY_API_KEY     – API key
  * - CLOUDINARY_API_SECRET  – API secret
+ *
+ * Values are read at runtime so they work even when dotenv loads after this module.
  */
 
-export const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME?.trim() || '';
-export const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY?.trim() || '';
-export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET?.trim() || '';
+function getEnv() {
+  return {
+    cloudName: (process.env.CLOUDINARY_CLOUD_NAME || '').trim(),
+    apiKey: (process.env.CLOUDINARY_API_KEY || '').trim(),
+    apiSecret: (process.env.CLOUDINARY_API_SECRET || '').trim()
+  };
+}
 
-export const isCloudinaryConfigured = () =>
-  Boolean(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET);
+export const isCloudinaryConfigured = () => {
+  const { cloudName, apiKey, apiSecret } = getEnv();
+  return Boolean(cloudName && apiKey && apiSecret);
+};
+
+export function getCloudinaryConfig() {
+  return getEnv();
+}
