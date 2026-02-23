@@ -8,6 +8,7 @@
 
 import { PROFILES_PHOTOS_URL_PREFIX } from '../config/uploadPaths.js';
 import { R2_PUBLIC_URL, isR2Configured } from '../config/r2.js';
+import { isCloudinaryStored, getPublicIdFromStored, getPublicUrl } from '../services/cloudinaryStorage.js';
 
 function getBaseUrl() {
   const base = process.env.API_BASE_URL || process.env.BASE_URL || '';
@@ -22,6 +23,11 @@ export function toFullImageUrl(url) {
   if (!url || typeof url !== 'string') return url || '';
   const u = url.trim();
   if (u.startsWith('http://') || u.startsWith('https://')) return u;
+  // Cloudinary: stored as "cloudinary:public_id" (short form, ~45 chars vs ~95 for full URL)
+  if (isCloudinaryStored(u)) {
+    const publicId = getPublicIdFromStored(u);
+    return publicId ? getPublicUrl(publicId) : u;
+  }
   // R2: stored key like "profiles/profile_xxx.jpg"
   if (isR2Configured() && R2_PUBLIC_URL && u.startsWith('profiles/')) {
     return `${R2_PUBLIC_URL}/${u}`;

@@ -6,7 +6,7 @@ import { getAbsolutePathFromStoredUrl } from '../config/uploadPaths.js';
 import { isR2Configured } from '../config/r2.js';
 import { isCloudinaryConfigured } from '../config/cloudinary.js';
 import { uploadToR2, deleteFromR2, isR2Key, keyFromR2Url } from '../services/r2Storage.js';
-import { uploadToCloudinary, getPublicIdFromUrl, deleteFromCloudinary } from '../services/cloudinaryStorage.js';
+import { uploadToCloudinary, toStoredValue, isCloudinaryStored, getPublicIdFromStored, getPublicIdFromUrl, deleteFromCloudinary } from '../services/cloudinaryStorage.js';
 import {
   withFullPhotoUrls,
   parseProfilePictureToPhotos,
@@ -57,8 +57,8 @@ export const uploadPhotos = async (req, res) => {
           return res.status(400).json({ success: false, error: 'File buffer missing (Cloudinary mode)' });
         }
         const contentType = file.mimetype || 'image/jpeg';
-        const { url } = await uploadToCloudinary(buffer, contentType);
-        newNames.push(url);
+        const { publicId } = await uploadToCloudinary(buffer, contentType);
+        newNames.push(toStoredValue(publicId));
       }
     } else if (useR2) {
       for (const file of files) {
@@ -203,7 +203,9 @@ export const deletePhoto = async (req, res) => {
 
     await user.update({ profilePicture: formatProfilePictureFromPhotos(filtered) });
 
-    const cloudinaryPublicId = getPublicIdFromUrl(imageName);
+    const cloudinaryPublicId = isCloudinaryStored(imageName)
+      ? getPublicIdFromStored(imageName)
+      : getPublicIdFromUrl(imageName);
     if (cloudinaryPublicId) {
       try {
         await deleteFromCloudinary(cloudinaryPublicId);
