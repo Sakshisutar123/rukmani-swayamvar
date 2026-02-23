@@ -15,9 +15,11 @@
     "migrate:undo": "npx sequelize-cli db:migrate:undo"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.995.0",
     "@getbrevo/brevo": "^3.0.1",
     "agora-access-token": "^2.0.4",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.9.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",

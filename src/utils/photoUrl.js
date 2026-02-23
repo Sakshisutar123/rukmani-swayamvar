@@ -1,11 +1,13 @@
 /**
  * Convert stored photo value (image name or path) to a full URL for display.
- * - Stored value is either: unique image name (e.g. profile_1739_abc12.jpg) or full path/URL.
- * - Localhost: leave API_BASE_URL empty or set to http://localhost:PORT for same-origin.
+ * - Stored value: image name (profile_xxx.jpg), R2 key (profiles/profile_xxx.jpg), path (/uploads/profiles/...), or full URL.
+ * - When R2 is configured, keys starting with "profiles/" are resolved to R2_PUBLIC_URL.
  * - Server: set API_BASE_URL to your public API URL (e.g. https://api.yoursite.com) so clients get absolute URLs.
+ * - Localhost: leave API_BASE_URL empty or set to http://localhost:PORT for same-origin.
  */
 
 import { PROFILES_PHOTOS_URL_PREFIX } from '../config/uploadPaths.js';
+import { R2_PUBLIC_URL, isR2Configured } from '../config/r2.js';
 
 function getBaseUrl() {
   const base = process.env.API_BASE_URL || process.env.BASE_URL || '';
@@ -13,13 +15,17 @@ function getBaseUrl() {
 }
 
 /**
- * @param {string} url - Stored value: image name (e.g. profile_1739_abc.jpg), or path (/uploads/profiles/...), or full URL
- * @returns {string} - Path or full URL the client can use to display the image
+ * @param {string} url - Stored value: image name (e.g. profile_1739_abc.jpg), R2 key (profiles/profile_xxx.jpg), or full URL
+ * @returns {string} - Full URL the client can use to display the image
  */
 export function toFullImageUrl(url) {
   if (!url || typeof url !== 'string') return url || '';
   const u = url.trim();
   if (u.startsWith('http://') || u.startsWith('https://')) return u;
+  // R2: stored key like "profiles/profile_xxx.jpg"
+  if (isR2Configured() && R2_PUBLIC_URL && u.startsWith('profiles/')) {
+    return `${R2_PUBLIC_URL}/${u}`;
+  }
   const base = getBaseUrl();
   const pathPart = u.includes('/') ? u : `${PROFILES_PHOTOS_URL_PREFIX}/${u}`;
   const pathWithLeadingSlash = pathPart.startsWith('/') ? pathPart : '/' + pathPart;

@@ -200,6 +200,32 @@ In the Render Dashboard, open your **Web Service** → **Environment** tab and s
 | `AGORA_APP_ID` | Agora application ID |
 | `AGORA_APP_CERTIFICATE` | Agora app certificate |
 
+### Recommended (persistent profile photos – Cloudinary)
+
+On Render’s free tier the filesystem is **ephemeral**: anything under `uploads/` is lost when the service sleeps or redeploys. To keep profile photos persistent, use **Cloudinary** (recommended):
+
+| Key | Description |
+|-----|-------------|
+| `CLOUDINARY_CLOUD_NAME` | From Cloudinary dashboard (Dashboard → Product credentials) |
+| `CLOUDINARY_API_KEY` | API key |
+| `CLOUDINARY_API_SECRET` | API secret |
+
+When all three are set, new uploads go to Cloudinary and photos survive sleep/redeploys. See **[docs/CLOUDINARY_SETUP.md](CLOUDINARY_SETUP.md)** for setup steps.
+
+### Optional (persistent profile photos – Cloudflare R2)
+
+Alternatively you can use **Cloudflare R2** instead of Cloudinary. If **both** Cloudinary and R2 are configured, **Cloudinary is used**. To use only R2, set all of:
+
+| Key | Description |
+|-----|-------------|
+| `R2_ACCOUNT_ID` | Cloudflare account ID |
+| `R2_ACCESS_KEY_ID` | R2 API token access key |
+| `R2_SECRET_ACCESS_KEY` | R2 API token secret |
+| `R2_BUCKET_NAME` | R2 bucket name (e.g. `matrimony-profiles`) |
+| `R2_PUBLIC_URL` | Public URL for the bucket (e.g. `https://pub-xxxx.r2.dev`) |
+
+See **[docs/R2_SETUP.md](R2_SETUP.md)** for step-by-step R2 setup.
+
 ### Optional (database sync)
 
 | Key | Description |
@@ -254,7 +280,7 @@ After migrations, your API should be able to read/write users, profiles, convers
 ## 9. Free Tier Limitations & Caveats
 
 - **Spindown:** Service spins down after **15 minutes** of no requests. The first request after that may take **~30–60 seconds** while the instance starts.
-- **Ephemeral filesystem:** Anything written to disk (e.g. under `uploads/`) is **lost** on redeploy or restart. Profile photos and file uploads stored locally will not persist. For production you’d need object storage (e.g. S3, Cloudflare R2) and code changes to upload there.
+- **Ephemeral filesystem:** Anything written to disk (e.g. under `uploads/`) is **lost** on redeploy or restart. Profile photos stored locally will not persist. For production you’d need **Cloudinary** or **Cloudflare R2**—see [CLOUDINARY_SETUP.md](CLOUDINARY_SETUP.md) or [R2_SETUP.md](R2_SETUP.md). When Cloudinary or R2 env vars are set, new uploads go there automatically. Prefer Cloudinary on Render so photos persist when the service sleeps (see CLOUDINARY_SETUP.md).
 - **Free instance hours:** 750 hours/month per workspace. When exceeded, free services are suspended until the next month.
 - **Postgres (free):** 1 GB, single instance, and (as of Render docs) limited lifetime (e.g. 90 days) unless upgraded.
 - **SMTP ports:** Free web services **cannot** use outbound ports 25, 465, or 587. This app uses **Brevo’s HTTP API** for email, so email can still work. Direct SMTP from the app would not work on free tier.

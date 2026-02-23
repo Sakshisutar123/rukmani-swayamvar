@@ -1,8 +1,12 @@
 import path from 'path';
 import fs from 'fs';
 import User from '../models/User.js';
-import { MAX_COUNT } from '../middleware/uploadPhotos.js';
+import { MAX_COUNT, getR2KeyForFile } from '../middleware/uploadPhotos.js';
 import { getAbsolutePathFromStoredUrl } from '../config/uploadPaths.js';
+import { isR2Configured } from '../config/r2.js';
+import { isCloudinaryConfigured } from '../config/cloudinary.js';
+import { uploadToR2, deleteFromR2, isR2Key, keyFromR2Url } from '../services/r2Storage.js';
+import { uploadToCloudinary, getPublicIdFromUrl, deleteFromCloudinary } from '../services/cloudinaryStorage.js';
 import {
   withFullPhotoUrls,
   parseProfilePictureToPhotos,
@@ -11,7 +15,7 @@ import {
 
 /**
  * POST /api/profiles/photos/upload?userId=...
- * Upload images; saves to uploads/profiles/ and appends image names to users.profilePicture (comma-separated).
+ * Upload images: to Cloudinary (if configured), else R2, else uploads/profiles/; appends to users.profilePicture (comma-separated).
  */
 export const uploadPhotos = async (req, res) => {
   try {
@@ -42,7 +46,37 @@ export const uploadPhotos = async (req, res) => {
       });
     }
 
-    const newNames = files.map((file) => path.basename(file.path));
+    const useCloudinary = isCloudinaryConfigured();
+    const useR2 = isR2Configured();
+    const newNames = [];
+
+    if (useCloudinary) {
+      for (const file of files) {
+        const buffer = file.buffer;
+        if (!buffer) {
+          return res.status(400).json({ success: false, error: 'File buffer missing (Cloudinary mode)' });
+        }
+        const contentType = file.mimetype || 'image/jpeg';
+        const { url } = await uploadToCloudinary(buffer, contentType);
+        newNames.push(url);
+      }
+    } else if (useR2) {
+      for (const file of files) {
+        const buffer = file.buffer;
+        if (!buffer) {
+          return res.status(400).json({ success: false, error: 'File buffer missing (R2 mode)' });
+        }
+        const key = getR2KeyForFile(file);
+        const contentType = file.mimetype || 'image/jpeg';
+        await uploadToR2(buffer, key, contentType);
+        newNames.push(key);
+      }
+    } else {
+      for (const file of files) {
+        newNames.push(path.basename(file.path));
+      }
+    }
+
     const allNames = existing.map((p) => p.url).concat(newNames);
     await user.update({ profilePicture: formatProfilePictureFromPhotos(allNames) });
 
@@ -169,13 +203,29 @@ export const deletePhoto = async (req, res) => {
 
     await user.update({ profilePicture: formatProfilePictureFromPhotos(filtered) });
 
-    if (!imageName.startsWith('http')) {
-      const fullPath = getAbsolutePathFromStoredUrl(imageName);
-      if (fullPath && fs.existsSync(fullPath)) {
+    const cloudinaryPublicId = getPublicIdFromUrl(imageName);
+    if (cloudinaryPublicId) {
+      try {
+        await deleteFromCloudinary(cloudinaryPublicId);
+      } catch (e) {
+        console.warn('Could not delete from Cloudinary:', cloudinaryPublicId, e.message);
+      }
+    } else {
+      const r2Key = isR2Key(imageName) ? imageName : keyFromR2Url(imageName);
+      if (r2Key) {
         try {
-          fs.unlinkSync(fullPath);
+          await deleteFromR2(r2Key);
         } catch (e) {
-          console.warn('Could not delete file:', fullPath, e.message);
+          console.warn('Could not delete from R2:', r2Key, e.message);
+        }
+      } else if (!imageName.startsWith('http')) {
+        const fullPath = getAbsolutePathFromStoredUrl(imageName);
+        if (fullPath && fs.existsSync(fullPath)) {
+          try {
+            fs.unlinkSync(fullPath);
+          } catch (e) {
+            console.warn('Could not delete file:', fullPath, e.message);
+          }
         }
       }
     }
