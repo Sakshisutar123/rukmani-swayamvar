@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { Server as SocketServer } from 'socket.io';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database.js';
+import './models/ConnectionRequest.js'; // ensure table is registered before sync
 import authRoutes from './routes/authRoutes.js';
 import preferencesRoutes from './routes/preferencesRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';

@@ -23,6 +23,7 @@ const ConnectionRequest = sequelize.define('ConnectionRequest', {
   }
 }, {
   tableName: 'connection_requests',
+  freezeTableName: true,
   timestamps: true,
   indexes: [
     { fields: ['requesterId'] },
