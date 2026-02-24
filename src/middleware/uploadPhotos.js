@@ -1,9 +1,11 @@
 import multer from 'multer';
 import path from 'path';
+import User from '../models/User.js';
 import { PROFILES_PHOTOS_DIR, ensureUploadDirs } from '../config/uploadPaths.js';
 import { isR2Configured } from '../config/r2.js';
 import { isCloudinaryConfigured } from '../config/cloudinary.js';
 import { R2_PROFILES_PREFIX } from '../services/r2Storage.js';
+import { parseProfilePictureToPhotos } from '../utils/photoUrl.js';
 
 // Ensure base upload dirs exist (idempotent) when not using R2
 ensureUploadDirs();
@@ -11,8 +13,8 @@ const UPLOAD_BASE = PROFILES_PHOTOS_DIR;
 
 /** Allowed MIME types for profile photos (gallery/camera) */
 const ALLOWED_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic'];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_COUNT = 10; // max photos per profile (including existing)
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB per image
+const MAX_COUNT = 5; // max profile images per user (including existing)
 
 function getExt(mimetype, originalname) {
   const mt = (mimetype || '').toLowerCase();
@@ -64,30 +66,70 @@ function fileFilter(_req, file, cb) {
 
 /**
  * Multer for profile photos from device gallery/camera.
+ * Validates: max 5 profile images per user (checks DB before accepting body), max 4MB per image.
  * For multipart uploads, pass userId in query: POST /photos/upload?userId=...
  * Form fields: "photos" (multiple) and/or "photo" (single) - so app can send one or many from gallery.
  */
 export function createProfilePhotoUpload() {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const userId = req.query?.userId || req.body?.userId;
     if (!userId) {
-      return res.status(400).json({ success: false, error: 'userId is required. Use query: ?userId=... for multipart upload.' });
+      return res.status(400).json({
+        success: false,
+        error: 'userId is required. Use query: ?userId=... for multipart upload.',
+        code: 'MISSING_USER_ID'
+      });
+    }
+    const user = await User.findByPk(userId, { attributes: ['id', 'profilePicture'] });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+    const existing = parseProfilePictureToPhotos(user.profilePicture);
+    if (existing.length >= MAX_COUNT) {
+      return res.status(400).json({
+        success: false,
+        error: `Maximum ${MAX_COUNT} profile images allowed. You already have ${existing.length}.`,
+        code: 'MAX_PHOTOS_EXCEEDED',
+        currentCount: existing.length,
+        maxCount: MAX_COUNT,
+        remainingSlots: 0
+      });
     }
     const storage = getStorage();
     const upload = multer({
       storage,
       fileFilter,
-      limits: { fileSize: MAX_FILE_SIZE, files: 6 }
+      limits: { fileSize: MAX_FILE_SIZE, files: MAX_COUNT }
     });
     upload.fields([
-      { name: 'photos', maxCount: 6 },
+      { name: 'photos', maxCount: MAX_COUNT },
       { name: 'photo', maxCount: 1 }
     ])(req, res, (err) => {
       if (err) {
-        if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, error: 'File too large. Max 5MB per image.' });
-        if (err.code === 'LIMIT_FILE_COUNT') return res.status(400).json({ success: false, error: 'Maximum 6 photos per upload.' });
-        if (err.message) return res.status(400).json({ success: false, error: err.message });
-        return res.status(500).json({ success: false, error: 'Upload failed' });
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({
+            success: false,
+            error: 'Each image must be 4MB or less.',
+            code: 'FILE_TOO_LARGE',
+            maxSizeBytes: MAX_FILE_SIZE
+          });
+        }
+        if (err.code === 'LIMIT_FILE_COUNT') {
+          return res.status(400).json({
+            success: false,
+            error: `Maximum ${MAX_COUNT} photos per upload.`,
+            code: 'TOO_MANY_FILES',
+            maxCount: MAX_COUNT
+          });
+        }
+        if (err.message) {
+          return res.status(400).json({ success: false, error: err.message, code: 'VALIDATION_ERROR' });
+        }
+        return res.status(500).json({ success: false, error: 'Upload failed', code: 'UPLOAD_ERROR' });
       }
       next();
     });
@@ -109,13 +151,22 @@ export function createSinglePhotoUpload() {
     });
     upload.single('photo')(req, res, (err) => {
       if (err) {
-        if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, error: 'File too large. Max 5MB.' });
-        if (err.message) return res.status(400).json({ success: false, error: err.message });
-        return res.status(500).json({ success: false, error: 'Upload failed' });
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({
+            success: false,
+            error: 'Each image must be 4MB or less.',
+            code: 'FILE_TOO_LARGE',
+            maxSizeBytes: MAX_FILE_SIZE
+          });
+        }
+        if (err.message) {
+          return res.status(400).json({ success: false, error: err.message, code: 'VALIDATION_ERROR' });
+        }
+        return res.status(500).json({ success: false, error: 'Upload failed', code: 'UPLOAD_ERROR' });
       }
       next();
     });
   };
 }
 
-export { MAX_COUNT, UPLOAD_BASE, PROFILES_PHOTOS_DIR };
+export { MAX_COUNT, MAX_FILE_SIZE, UPLOAD_BASE, PROFILES_PHOTOS_DIR };

@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import User from '../models/User.js';
-import { MAX_COUNT, getR2KeyForFile } from '../middleware/uploadPhotos.js';
+import { MAX_COUNT, MAX_FILE_SIZE, getR2KeyForFile } from '../middleware/uploadPhotos.js';
 import { getAbsolutePathFromStoredUrl } from '../config/uploadPaths.js';
 import { isR2Configured } from '../config/r2.js';
 import { isCloudinaryConfigured } from '../config/cloudinary.js';
@@ -21,12 +21,20 @@ export const uploadPhotos = async (req, res) => {
   try {
     const userId = req.query?.userId || req.body?.userId;
     if (!userId) {
-      return res.status(400).json({ success: false, error: 'userId is required (query or form field)' });
+      return res.status(400).json({
+        success: false,
+        error: 'userId is required (query or form field)',
+        code: 'MISSING_USER_ID'
+      });
     }
 
     const user = await User.findByPk(userId, { attributes: ['id', 'profilePicture'] });
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
     const fromFields = req.files
@@ -34,16 +42,39 @@ export const uploadPhotos = async (req, res) => {
       : [];
     const files = fromFields.length > 0 ? fromFields : (req.file ? [req.file] : []);
     if (files.length === 0) {
-      return res.status(400).json({ success: false, error: 'No image file sent. Pick from gallery and use form field "photos" (multiple) or "photo" (single).' });
+      return res.status(400).json({
+        success: false,
+        error: 'No image file sent. Use form field "photos" (multiple) or "photo" (single).',
+        code: 'NO_FILES'
+      });
     }
 
+    // Validate count before any save (cannot be bypassed)
     const existing = parseProfilePictureToPhotos(user.profilePicture);
     const remaining = Math.max(0, MAX_COUNT - existing.length);
     if (files.length > remaining) {
       return res.status(400).json({
         success: false,
-        error: `Maximum ${MAX_COUNT} photos per profile. You have ${existing.length}; can add ${remaining} more.`
+        error: `Maximum ${MAX_COUNT} profile images allowed. You have ${existing.length}; you can add ${remaining} more.`,
+        code: 'MAX_PHOTOS_EXCEEDED',
+        currentCount: existing.length,
+        maxCount: MAX_COUNT,
+        remainingSlots: remaining
       });
+    }
+
+    // Validate each file size server-side (cannot be bypassed by client)
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const size = file.size ?? file.buffer?.length ?? (file.path && fs.statSync(file.path, { throwIfNoEntry: false })?.size);
+      if (size != null && size > MAX_FILE_SIZE) {
+        return res.status(413).json({
+          success: false,
+          error: `Each image must be 4MB or less. File ${i + 1} exceeds the limit.`,
+          code: 'FILE_TOO_LARGE',
+          maxSizeBytes: MAX_FILE_SIZE
+        });
+      }
     }
 
     const useCloudinary = isCloudinaryConfigured();
@@ -54,7 +85,11 @@ export const uploadPhotos = async (req, res) => {
       for (const file of files) {
         const buffer = file.buffer;
         if (!buffer) {
-          return res.status(400).json({ success: false, error: 'File buffer missing (Cloudinary mode)' });
+          return res.status(400).json({
+            success: false,
+            error: 'File buffer missing (Cloudinary mode)',
+            code: 'UPLOAD_ERROR'
+          });
         }
         const contentType = file.mimetype || 'image/jpeg';
         const { publicId } = await uploadToCloudinary(buffer, contentType);
@@ -64,7 +99,11 @@ export const uploadPhotos = async (req, res) => {
       for (const file of files) {
         const buffer = file.buffer;
         if (!buffer) {
-          return res.status(400).json({ success: false, error: 'File buffer missing (R2 mode)' });
+          return res.status(400).json({
+            success: false,
+            error: 'File buffer missing (R2 mode)',
+            code: 'UPLOAD_ERROR'
+          });
         }
         const key = getR2KeyForFile(file);
         const contentType = file.mimetype || 'image/jpeg';
@@ -93,7 +132,11 @@ export const uploadPhotos = async (req, res) => {
     });
   } catch (err) {
     console.error('Upload profile photos error:', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Upload failed',
+      code: 'UPLOAD_ERROR'
+    });
   }
 };
 
@@ -105,16 +148,28 @@ export const addPhotoUrls = async (req, res) => {
   try {
     const { userId, photoUrls } = req.body || {};
     if (!userId) {
-      return res.status(400).json({ success: false, error: 'userId is required' });
+      return res.status(400).json({
+        success: false,
+        error: 'userId is required',
+        code: 'MISSING_USER_ID'
+      });
     }
     const urls = Array.isArray(photoUrls) ? photoUrls.filter((u) => typeof u === 'string' && u.trim()) : [];
     if (urls.length === 0) {
-      return res.status(400).json({ success: false, error: 'photoUrls array with at least one URL is required' });
+      return res.status(400).json({
+        success: false,
+        error: 'photoUrls array with at least one URL is required',
+        code: 'INVALID_INPUT'
+      });
     }
 
     const user = await User.findByPk(userId, { attributes: ['id', 'profilePicture'] });
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
     const existing = parseProfilePictureToPhotos(user.profilePicture);
@@ -122,7 +177,11 @@ export const addPhotoUrls = async (req, res) => {
     if (urls.length > remaining) {
       return res.status(400).json({
         success: false,
-        error: `Maximum ${MAX_COUNT} photos per profile. You have ${existing.length}; can add ${remaining} more.`
+        error: `Maximum ${MAX_COUNT} profile images allowed. You have ${existing.length}; you can add ${remaining} more.`,
+        code: 'MAX_PHOTOS_EXCEEDED',
+        currentCount: existing.length,
+        maxCount: MAX_COUNT,
+        remainingSlots: remaining
       });
     }
 
@@ -143,7 +202,11 @@ export const addPhotoUrls = async (req, res) => {
     });
   } catch (err) {
     console.error('Add photo URLs error:', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Server error',
+      code: 'UPLOAD_ERROR'
+    });
   }
 };
 
@@ -155,12 +218,20 @@ export const listMyPhotos = async (req, res) => {
   try {
     const userId = req.query?.userId || req.body?.userId;
     if (!userId) {
-      return res.status(400).json({ success: false, error: 'userId is required' });
+      return res.status(400).json({
+        success: false,
+        error: 'userId is required',
+        code: 'MISSING_USER_ID'
+      });
     }
 
     const user = await User.findByPk(userId, { attributes: ['id', 'profilePicture'] });
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
     const photos = parseProfilePictureToPhotos(user.profilePicture);
@@ -171,7 +242,11 @@ export const listMyPhotos = async (req, res) => {
     });
   } catch (err) {
     console.error('List my photos error:', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Server error',
+      code: 'SERVER_ERROR'
+    });
   }
 };
 
@@ -184,21 +259,37 @@ export const deletePhoto = async (req, res) => {
     const imageName = req.params.photoId;
     const userId = req.query?.userId || req.body?.userId;
     if (!userId) {
-      return res.status(400).json({ success: false, error: 'userId is required' });
+      return res.status(400).json({
+        success: false,
+        error: 'userId is required',
+        code: 'MISSING_USER_ID'
+      });
     }
     if (!imageName) {
-      return res.status(400).json({ success: false, error: 'Image name (photoId) is required' });
+      return res.status(400).json({
+        success: false,
+        error: 'Image name (photoId) is required',
+        code: 'INVALID_INPUT'
+      });
     }
 
     const user = await User.findByPk(userId, { attributes: ['id', 'profilePicture'] });
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
     const photos = parseProfilePictureToPhotos(user.profilePicture);
     const filtered = photos.filter((p) => p.url !== imageName && p.id !== imageName);
     if (filtered.length === photos.length) {
-      return res.status(404).json({ success: false, error: 'Photo not found or not yours' });
+      return res.status(404).json({
+        success: false,
+        error: 'Photo not found or not yours',
+        code: 'PHOTO_NOT_FOUND'
+      });
     }
 
     await user.update({ profilePicture: formatProfilePictureFromPhotos(filtered) });
@@ -239,7 +330,11 @@ export const deletePhoto = async (req, res) => {
     });
   } catch (err) {
     console.error('Delete photo error:', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Server error',
+      code: 'SERVER_ERROR'
+    });
   }
 };
 
@@ -251,23 +346,39 @@ export const reorderPhotos = async (req, res) => {
   try {
     const { userId, photoNames } = req.body || {};
     if (!userId) {
-      return res.status(400).json({ success: false, error: 'userId is required' });
+      return res.status(400).json({
+        success: false,
+        error: 'userId is required',
+        code: 'MISSING_USER_ID'
+      });
     }
     const names = Array.isArray(photoNames) ? photoNames.filter((n) => n) : [];
     if (names.length === 0) {
-      return res.status(400).json({ success: false, error: 'photoNames array is required' });
+      return res.status(400).json({
+        success: false,
+        error: 'photoNames array is required',
+        code: 'INVALID_INPUT'
+      });
     }
 
     const user = await User.findByPk(userId, { attributes: ['id', 'profilePicture'] });
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
     const current = parseProfilePictureToPhotos(user.profilePicture);
     const currentSet = new Set(current.map((p) => p.url));
     const valid = names.filter((n) => currentSet.has(n));
     if (valid.length !== current.length) {
-      return res.status(400).json({ success: false, error: 'Some photo names are invalid or not yours' });
+      return res.status(400).json({
+        success: false,
+        error: 'Some photo names are invalid or not yours',
+        code: 'INVALID_PHOTO_NAMES'
+      });
     }
 
     await user.update({ profilePicture: formatProfilePictureFromPhotos(names) });
@@ -281,6 +392,10 @@ export const reorderPhotos = async (req, res) => {
     });
   } catch (err) {
     console.error('Reorder photos error:', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Server error',
+      code: 'SERVER_ERROR'
+    });
   }
 };
