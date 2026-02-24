@@ -1,5 +1,6 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import User from '../models/User.js';
 import { PROFILES_PHOTOS_DIR, ensureUploadDirs } from '../config/uploadPaths.js';
 import { isR2Configured } from '../config/r2.js';
@@ -131,6 +132,29 @@ export function createProfilePhotoUpload() {
         }
         return res.status(500).json({ success: false, error: 'Upload failed', code: 'UPLOAD_ERROR' });
       }
+      // Enforce 4MB per file after multer (cannot be bypassed; multer limit can fail in some setups)
+      const fromFields = req.files
+        ? [].concat(req.files.photos || [], req.files.photo || [])
+        : [];
+      const files = fromFields.length > 0 ? fromFields : (req.file ? [req.file] : []);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const size = file.size ?? file.buffer?.length ?? (file.path && fs.statSync(file.path, { throwIfNoEntry: false })?.size);
+        if (size == null || size > MAX_FILE_SIZE) {
+          // Remove uploaded file if on disk to avoid leaving large files
+          if (file.path && fs.existsSync(file.path)) {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
+          return res.status(413).json({
+            success: false,
+            error: size == null
+              ? 'Could not verify file size. Each image must be 4MB or less.'
+              : `Each image must be 4MB or less. File ${i + 1} is ${(size / (1024 * 1024)).toFixed(1)}MB.`,
+            code: 'FILE_TOO_LARGE',
+            maxSizeBytes: MAX_FILE_SIZE
+          });
+        }
+      }
       next();
     });
   };
@@ -163,6 +187,23 @@ export function createSinglePhotoUpload() {
           return res.status(400).json({ success: false, error: err.message, code: 'VALIDATION_ERROR' });
         }
         return res.status(500).json({ success: false, error: 'Upload failed', code: 'UPLOAD_ERROR' });
+      }
+      const file = req.file;
+      if (file) {
+        const size = file.size ?? file.buffer?.length ?? (file.path && fs.statSync(file.path, { throwIfNoEntry: false })?.size);
+        if (size == null || size > MAX_FILE_SIZE) {
+          if (file.path && fs.existsSync(file.path)) {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
+          return res.status(413).json({
+            success: false,
+            error: size != null && size > MAX_FILE_SIZE
+              ? `Each image must be 4MB or less. File is ${(size / (1024 * 1024)).toFixed(1)}MB.`
+              : 'Could not verify file size. Each image must be 4MB or less.',
+            code: 'FILE_TOO_LARGE',
+            maxSizeBytes: MAX_FILE_SIZE
+          });
+        }
       }
       next();
     });

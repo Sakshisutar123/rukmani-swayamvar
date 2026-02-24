@@ -63,14 +63,22 @@ export const uploadPhotos = async (req, res) => {
       });
     }
 
-    // Validate each file size server-side (cannot be bypassed by client)
+    // Validate each file size server-side (cannot be bypassed; reject if size unknown or > 4MB)
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const size = file.size ?? file.buffer?.length ?? (file.path && fs.statSync(file.path, { throwIfNoEntry: false })?.size);
-      if (size != null && size > MAX_FILE_SIZE) {
+      if (size == null) {
         return res.status(413).json({
           success: false,
-          error: `Each image must be 4MB or less. File ${i + 1} exceeds the limit.`,
+          error: 'Could not verify file size. Each image must be 4MB or less.',
+          code: 'FILE_TOO_LARGE',
+          maxSizeBytes: MAX_FILE_SIZE
+        });
+      }
+      if (size > MAX_FILE_SIZE) {
+        return res.status(413).json({
+          success: false,
+          error: `Each image must be 4MB or less. File ${i + 1} is ${(size / (1024 * 1024)).toFixed(1)}MB.`,
           code: 'FILE_TOO_LARGE',
           maxSizeBytes: MAX_FILE_SIZE
         });
