@@ -1,6 +1,7 @@
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import User from '../models/User.js';
+import { getConnectionStatus } from './connectionController.js';
 import { emitNewMessage } from '../services/realtime.js';
 import { sendPushToUser } from '../services/push.js';
 
@@ -52,6 +53,8 @@ export const createOrGetConversation = async (req, res) => {
       attributes: ['id', 'fullName', 'profilePicture']
     });
 
+    const { status: connectionStatus } = await getConnectionStatus(userId, otherId);
+
     return res.status(200).json({
       success: true,
       conversation: {
@@ -59,6 +62,7 @@ export const createOrGetConversation = async (req, res) => {
         user1Id: conversation.user1Id,
         user2Id: conversation.user2Id,
         createdAt: conversation.createdAt,
+        connectionStatus,
         otherUser: other ? {
           id: other.id,
           fullName: other.fullName,
@@ -119,6 +123,10 @@ export const listConversations = async (req, res) => {
     const list = await Promise.all(
       conversations.map(async (conv) => {
         const other = conv.user1Id === userId ? conv.user2 : conv.user1;
+        const otherId = other?.id;
+        const { status: connectionStatus } = otherId
+          ? await getConnectionStatus(userId, otherId)
+          : { status: 'none' };
         const lastMessage = await Message.findOne({
           where: { conversationId: conv.id },
           order: [['createdAt', 'DESC']],
@@ -126,6 +134,7 @@ export const listConversations = async (req, res) => {
         });
         return {
           id: conv.id,
+          connectionStatus,
           otherUser: other ? { id: other.id, fullName: other.fullName, profilePicture: other.profilePicture } : null,
           lastMessage: lastMessage
             ? {
@@ -184,6 +193,40 @@ export const sendMessage = async (req, res) => {
     }
 
     const receiverId = conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id;
+    const { status: connectionStatus } = await getConnectionStatus(userId, receiverId);
+
+    if (connectionStatus === 'none') {
+      return res.status(403).json({
+        success: false,
+        error: 'Send a connection request first to message this user.'
+      });
+    }
+    if (connectionStatus === 'rejected') {
+      return res.status(403).json({
+        success: false,
+        error: 'Connection was rejected. You cannot message this user.'
+      });
+    }
+    if (connectionStatus === 'pending_received') {
+      return res.status(403).json({
+        success: false,
+        error: 'Accept their connection request first to start messaging.'
+      });
+    }
+    if (connectionStatus === 'pending_sent') {
+      const count = await Message.count({
+        where: {
+          conversationId,
+          senderId: userId
+        }
+      });
+      if (count >= 1) {
+        return res.status(403).json({
+          success: false,
+          error: 'You can send only one message until they accept your connection request.'
+        });
+      }
+    }
 
     const message = await Message.create({
       conversationId,

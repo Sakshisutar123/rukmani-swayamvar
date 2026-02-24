@@ -10,6 +10,7 @@ import preferencesRoutes from './routes/preferencesRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import favoritesRoutes from './routes/favoritesRoutes.js';
 import conversationRoutes from './routes/conversationRoutes.js';
+import connectionRoutes from './routes/connectionRoutes.js';
 import callsRoutes from './routes/callsRoutes.js';
 import { initRealtime } from './services/realtime.js';
 import { ensureUploadDirs, UPLOADS_DIR } from './config/uploadPaths.js';
@@ -53,6 +54,7 @@ app.use('/api/preferences', preferencesRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/conversations', conversationRoutes);
+app.use('/api/connections', connectionRoutes);
 app.use('/api/calls', callsRoutes);
 console.log('✅ Routes registered');
 
