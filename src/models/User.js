@@ -91,6 +91,10 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING, 
     allowNull: true 
   },
+  panth: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   
   // Location Information
   city: { 

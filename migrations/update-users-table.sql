@@ -13,6 +13,7 @@ ALTER TABLE users DROP COLUMN IF EXISTS role;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_type character varying;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS qualification character varying;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS college_name character varying;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS panth character varying;
 
 -- =====================================================
 -- OPTION 2: Create Fresh Table (Deletes Existing Data)

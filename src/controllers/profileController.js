@@ -19,6 +19,7 @@ const PROFILE_LIST_ATTRIBUTES = [
   'religion',
   'caste',
   'subCaste',
+  'panth',
   'city',
   'state',
   'country',
@@ -52,6 +53,7 @@ const PROFILE_DETAIL_ATTRIBUTES = [
   'religion',
   'caste',
   'subCaste',
+  'panth',
   'city',
   'state',
   'country',
@@ -391,7 +393,7 @@ export const getProfileDetails = async (req, res) => {
 /** Allowed fields for profile update (edit my profile). Excludes id, email, passwordHash, otp, otpExpiry, isVerified, isRegistered, isActive, createdAt, updatedAt. */
 const PROFILE_UPDATE_KEYS = [
   'phone', 'fullName', 'gender', 'dateOfBirth', 'age', 'height', 'weight', 'skinTone',
-  'doSmoke', 'doDrink', 'diet', 'religion', 'caste', 'subCaste', 'city', 'state', 'country', 'address',
+  'doSmoke', 'doDrink', 'diet', 'religion', 'caste', 'subCaste', 'panth', 'city', 'state', 'country', 'address',
   'profession', 'occupation', 'education', 'workExperience', 'income', 'companyName', 'workLocation',
   'maritalStatus', 'haveChildren', 'motherTongue', 'manglikStatus', 'aboutMe', 'familyStatus', 'familyValues',
   'familyType', 'familyIncome', 'motherOccupation', 'fatherOccupation', 'whoUses', 'bio', 'profilePicture'
@@ -407,7 +409,7 @@ export const getMyProfile = getProfileDetails;
 /**
  * POST /api/profiles/update or POST /api/profiles/edit
  * Body: { userId, ...profileFields, photoUrls? } - partial update.
- * Optional photoUrls: string[] appends new photos (e.g. add photos later if skipped at creation). Max 10 total.
+ * Optional photoUrls: string[] appends new photos (e.g. add photos later if skipped at creation). Max 5 total.
  */
 export const updateMyProfile = async (req, res) => {
   try {

@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import fs from 'fs';
 import { parseProfilePictureToPhotos, formatProfilePictureFromPhotos } from '../utils/photoUrl.js';
+import { MAX_COUNT as MAX_PROFILE_PHOTOS } from '../middleware/uploadPhotos.js';
 import path from 'path';
 import bcrypt from 'bcrypt';
 import otpGenerator from 'otp-generator';
@@ -420,6 +421,7 @@ export const createProfile = async (req, res) => {
       religion,
       caste,
       subCaste,
+      panth,
       city,
       state,
       country,
@@ -486,6 +488,7 @@ export const createProfile = async (req, res) => {
       religion: religion ?? user.religion,
       caste: caste ?? user.caste,
       subCaste: subCaste ?? user.subCaste,
+      panth: panth ?? user.panth,
       city: city ?? user.city,
       state: state ?? user.state,
       country: country ?? user.country ?? 'India',
@@ -511,6 +514,11 @@ export const createProfile = async (req, res) => {
       bio: bio ?? user.bio,
       profilePicture: profilePicture ?? user.profilePicture
     };
+    // Enforce max 5 profile photos: cap profilePicture and photoUrls (cannot be bypassed)
+    const currentPhotos = parseProfilePictureToPhotos(updateData.profilePicture);
+    if (currentPhotos.length > MAX_PROFILE_PHOTOS) {
+      updateData.profilePicture = formatProfilePictureFromPhotos(currentPhotos.slice(0, MAX_PROFILE_PHOTOS).map((p) => p.url));
+    }
     console.log('Update payload:', updateData);
     try {
       const logDir = path.resolve(process.cwd(), 'logs');
@@ -521,12 +529,12 @@ export const createProfile = async (req, res) => {
     }
     await user.update(updateData);
 
-    // Add profile photos if provided (store as comma-separated in users.profilePicture)
+    // Add profile photos if provided (store as comma-separated in users.profilePicture). Max 5 total.
     const urls = Array.isArray(photoUrls) ? photoUrls.filter((u) => typeof u === 'string' && u.trim()) : [];
     if (urls.length > 0) {
-      const maxPhotos = 10;
       const existing = parseProfilePictureToPhotos(user.profilePicture);
-      const toAdd = urls.slice(0, Math.max(0, maxPhotos - existing.length)).map((u) => u.trim());
+      const remaining = Math.max(0, MAX_PROFILE_PHOTOS - existing.length);
+      const toAdd = urls.slice(0, remaining).map((u) => u.trim());
       if (toAdd.length > 0) {
         const allNames = existing.map((p) => p.url).concat(toAdd);
         await user.update({ profilePicture: formatProfilePictureFromPhotos(allNames) });

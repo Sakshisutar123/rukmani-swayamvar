@@ -15,6 +15,7 @@ const FAVORITE_PROFILE_ATTRIBUTES = [
   'religion',
   'caste',
   'subCaste',
+  'panth',
   'city',
   'state',
   'country',
