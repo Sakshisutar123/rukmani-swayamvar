@@ -72,7 +72,11 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('partner_preferences', ['userId']);
+    try {
+      await queryInterface.addIndex('partner_preferences', ['userId']);
+    } catch (err) {
+      if (err.message && !err.message.includes('Duplicate key name')) throw err;
+    }
   },
 
   async down(queryInterface, Sequelize) {

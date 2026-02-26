@@ -60,10 +60,17 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('call_logs', ['callerId']);
-    await queryInterface.addIndex('call_logs', ['calleeId']);
-    await queryInterface.addIndex('call_logs', ['channelId']);
-    await queryInterface.addIndex('call_logs', ['startedAt']);
+    const addIndexIfMissing = async (columns, options = {}) => {
+      try {
+        await queryInterface.addIndex('call_logs', columns, options);
+      } catch (err) {
+        if (err.message && !err.message.includes('Duplicate key name')) throw err;
+      }
+    };
+    await addIndexIfMissing(['callerId']);
+    await addIndexIfMissing(['calleeId']);
+    await addIndexIfMissing(['channelId']);
+    await addIndexIfMissing(['startedAt']);
   },
 
   async down(queryInterface, Sequelize) {

@@ -77,7 +77,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, async () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-  console.log('✅ PostgreSQL connected');
+  console.log('✅ MySQL connected');
   console.log('✅ Socket.io real-time enabled');
   const { isCloudinaryConfigured } = await import('./config/cloudinary.js');
   const { isR2Configured } = await import('./config/r2.js');

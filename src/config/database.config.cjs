@@ -4,43 +4,34 @@ require('dotenv').config();
 
 module.exports = {
   development: {
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'vescript',
+    username: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'matrimony',
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
+    port: process.env.DB_PORT || 3306,
+    dialect: 'mysql',
     logging: false
   },
   test: {
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'vescript',
+    username: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME_TEST || 'matrimony_test',
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
+    port: process.env.DB_PORT || 3306,
+    dialect: 'mysql',
     logging: false
   },
   production: {
-    // If DATABASE_URL is provided, parse it
     url: process.env.DATABASE_URL,
-    dialect: 'postgres',
-    protocol: 'postgres',
+    dialect: 'mysql',
     logging: false,
-    dialectOptions: process.env.DATABASE_URL ? {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    } : {},
-    // Fallback to individual env vars if DATABASE_URL not set
+    dialectOptions: process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: false } } : {},
     ...(process.env.DATABASE_URL ? {} : {
       username: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 5432
+      port: process.env.DB_PORT || 3306
     })
   }
 };
-

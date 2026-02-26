@@ -32,7 +32,11 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false
       });
-      await queryInterface.addIndex('messages', ['receiverId']);
+      try {
+        await queryInterface.addIndex('messages', ['receiverId']);
+      } catch (err) {
+        if (err.message && !err.message.includes('Duplicate key name')) throw err;
+      }
     }
   },
 

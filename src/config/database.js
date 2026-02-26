@@ -2,25 +2,22 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Use DATABASE_URL when set (e.g. Render, Heroku); otherwise use individual DB_* vars
+// Use DATABASE_URL when set (e.g. production); otherwise use individual DB_* vars
 const databaseUrl = process.env.DATABASE_URL;
 const sequelize = databaseUrl
   ? new Sequelize(databaseUrl, {
-      dialect: 'postgres',
-      protocol: 'postgres',
+      dialect: 'mysql',
       logging: false,
-      dialectOptions: {
-        ssl: { require: true, rejectUnauthorized: false }
-      }
+      dialectOptions: process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: false } } : {}
     })
   : new Sequelize(
       process.env.DB_NAME || 'matrimony',
-      process.env.DB_USER || 'postgres',
-      process.env.DB_PASSWORD || 'vescript',
+      process.env.DB_USER || 'root',
+      process.env.DB_PASSWORD || '',
       {
         host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 5432,
-        dialect: 'postgres',
+        port: process.env.DB_PORT || 3306,
+        dialect: 'mysql',
         logging: false
       }
     );
@@ -30,7 +27,7 @@ export { sequelize };
 export const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ PostgreSQL connected');
+    console.log('✅ MySQL connected');
 
     // Force sync to recreate tables with updated schema
     if (process.env.SYNC_DB === 'true' || process.env.NODE_ENV !== 'production') {

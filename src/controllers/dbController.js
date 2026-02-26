@@ -8,15 +8,15 @@ export const checkDatabase = async (req, res) => {
     // Test database connection
     await sequelize.authenticate();
     
-    // Check if users table exists
+    // Check if users table exists (MySQL: use table_schema = DATABASE())
     const [tableCheck] = await sequelize.query(
       `SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'users'
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = DATABASE() AND table_name = 'users'
       ) as table_exists`
     );
     
-    const tableExists = tableCheck[0]?.table_exists || false;
+    const tableExists = !!tableCheck[0]?.table_exists;
     
     let userCount = 0;
     let sampleUsers = [];
@@ -33,11 +33,11 @@ export const checkDatabase = async (req, res) => {
         raw: true
       });
       
-      // Get table structure
+      // Get table structure (MySQL: use table_schema = DATABASE())
       const [columns] = await sequelize.query(
         `SELECT column_name, data_type, is_nullable 
          FROM information_schema.columns 
-         WHERE table_name = 'users' 
+         WHERE table_schema = DATABASE() AND table_name = 'users' 
          ORDER BY ordinal_position`
       );
       tableStructure = columns;
@@ -58,7 +58,7 @@ export const checkDatabase = async (req, res) => {
         'See migrations/create-users-table-production.sql'
       ] : userCount === 0 ? [
         'Table exists but no users found',
-        'Add a user: INSERT INTO users ("uniqueId", "fullName", email) VALUES (...)'
+        'Add a user: INSERT INTO users (uniqueId, fullName, email) VALUES (...)'
       ] : ['Database is ready']
     });
   } catch (err) {

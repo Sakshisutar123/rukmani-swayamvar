@@ -44,9 +44,16 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('messages', ['conversationId']);
-    await queryInterface.addIndex('messages', ['senderId']);
-    await queryInterface.addIndex('messages', ['conversationId', 'createdAt']);
+    const addIndexIfMissing = async (columns, options = {}) => {
+      try {
+        await queryInterface.addIndex('messages', columns, options);
+      } catch (err) {
+        if (err.message && !err.message.includes('Duplicate key name')) throw err;
+      }
+    };
+    await addIndexIfMissing(['conversationId']);
+    await addIndexIfMissing(['senderId']);
+    await addIndexIfMissing(['conversationId', 'createdAt']);
   },
 
   async down(queryInterface, Sequelize) {

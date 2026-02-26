@@ -19,7 +19,7 @@ module.exports = {
     try {
       await queryInterface.addIndex('user_favorites', ['userId', 'isShortlisted']);
     } catch (err) {
-      if (err.name !== 'SequelizeDatabaseError' && !/already exists/i.test(err.message)) throw err;
+      if (err.message && !err.message.includes('Duplicate key name') && !/already exists/i.test(err.message)) throw err;
     }
   },
 

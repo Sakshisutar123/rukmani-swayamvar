@@ -67,12 +67,7 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
-
-    // Create index on uniqueId
-    await queryInterface.addIndex('users', ['uniqueId'], {
-      name: 'idx_users_uniqueId',
-      unique: true
-    });
+    // uniqueId already has unique: true above, so MySQL/Postgres create the unique index with the table
   },
 
   async down(queryInterface, Sequelize) {

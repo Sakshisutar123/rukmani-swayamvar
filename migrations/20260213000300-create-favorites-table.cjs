@@ -42,9 +42,17 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('user_favorites', ['userId']);
-    await queryInterface.addIndex('user_favorites', ['favoriteUserId']);
-    await queryInterface.addIndex('user_favorites', ['userId', 'favoriteUserId'], { unique: true });
+    // Add indexes only if they don't exist (MySQL may already create them via FK)
+    const addIndexIfMissing = async (columns, options = {}) => {
+      try {
+        await queryInterface.addIndex('user_favorites', columns, options);
+      } catch (err) {
+        if (err.message && !err.message.includes('Duplicate key name')) throw err;
+      }
+    };
+    await addIndexIfMissing(['userId']);
+    await addIndexIfMissing(['favoriteUserId']);
+    await addIndexIfMissing(['userId', 'favoriteUserId'], { unique: true });
   },
 
   async down(queryInterface, Sequelize) {

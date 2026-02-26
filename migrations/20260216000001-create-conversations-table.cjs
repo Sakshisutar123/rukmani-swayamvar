@@ -36,9 +36,16 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('conversations', ['user1Id']);
-    await queryInterface.addIndex('conversations', ['user2Id']);
-    await queryInterface.addIndex('conversations', ['user1Id', 'user2Id'], { unique: true });
+    const addIndexIfMissing = async (columns, options = {}) => {
+      try {
+        await queryInterface.addIndex('conversations', columns, options);
+      } catch (err) {
+        if (err.message && !err.message.includes('Duplicate key name')) throw err;
+      }
+    };
+    await addIndexIfMissing(['user1Id']);
+    await addIndexIfMissing(['user2Id']);
+    await addIndexIfMissing(['user1Id', 'user2Id'], { unique: true });
   },
 
   async down(queryInterface, Sequelize) {

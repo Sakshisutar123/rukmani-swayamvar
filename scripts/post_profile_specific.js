@@ -1,3 +1,4 @@
+
 import { sequelize } from '../src/config/database.js';
 import fetch from 'node-fetch';
 

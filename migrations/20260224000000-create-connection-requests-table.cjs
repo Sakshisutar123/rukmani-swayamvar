@@ -51,7 +51,7 @@ module.exports = {
       try {
         await queryInterface.addIndex(tableName, columns, options);
       } catch (err) {
-        if (err.message && !err.message.includes('already exists')) throw err;
+        if (err.message && !err.message.includes('Duplicate key name') && !err.message.includes('already exists')) throw err;
       }
     };
 

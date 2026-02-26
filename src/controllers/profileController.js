@@ -106,7 +106,7 @@ function parseRange(value) {
 
 /**
  * Build Sequelize where conditions from partner preferences.
- * Text fields use case-insensitive partial match (ILIKE) so "Hindu" matches "Hinduism", "Engineer" matches "Software Engineer".
+ * Text fields use case-insensitive partial match (LIKE with default collation) so "Hindu" matches "Hinduism", "Engineer" matches "Software Engineer".
  * Returns { where, appliedFilters } for response metadata.
  */
 function buildWhereFromPreferences(prefs, currentUserId, currentUserGender, options = {}) {
@@ -156,11 +156,11 @@ function buildWhereFromPreferences(prefs, currentUserId, currentUserGender, opti
   const addTextFilter = (prefValue, dbField, filterKey) => {
     if (!prefValue || typeof prefValue !== 'string' || !prefValue.trim()) return;
     const val = prefValue.trim();
-    where[dbField] = { [Op.iLike]: `%${val.replace(/%/g, '\\%')}%` };
+    where[dbField] = { [Op.like]: `%${val.replace(/%/g, '\\%')}%` };
     appliedFilters.push({ key: filterKey, value: val });
   };
 
-  // maritalStatus is a PostgreSQL ENUM - use exact match (ILIKE not supported on enum)
+  // maritalStatus is an ENUM - use exact match (LIKE not used for enum)
   if (prefs.marital_status && typeof prefs.marital_status === 'string' && prefs.marital_status.trim()) {
     where.maritalStatus = prefs.marital_status.trim();
     appliedFilters.push({ key: 'marital_status', value: prefs.marital_status.trim() });
